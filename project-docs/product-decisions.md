@@ -7,8 +7,8 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 ## Estado do projeto
 
 - Data da consolidação: 2026-06-22.
-- Fase: planejamento.
-- Desenvolvimento da aplicação: ainda não iniciado.
+- Fase: fundação técnica concluída.
+- Desenvolvimento da aplicação: iniciado; regras de negócio ainda pendentes.
 
 ## Escopo confirmado
 
@@ -44,6 +44,9 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Sessão | Token de uma hora, sem renovação automática | Manter segurança e escopo inicial simples |
 | Ordem da fila | Urgente antes de normal; FIFO dentro da prioridade | Cumprir prioridade sem perder previsibilidade |
 | README evolutivo | Atualizar em cada commit relevante e distinguir planejado de entregue | Manter a apresentação confiável durante toda a construção |
+| Organização inicial | Monorepo com backend, frontend e infraestrutura na raiz | Facilitar integração e execução do desafio |
+| Runtime HTTP | Timeouts, logs estruturados e shutdown gracioso | Partir de um servidor previsível e operável |
+| Health check inicial | Liveness do processo; readiness quando as dependências forem conectadas | Evitar declarar integrações inexistentes como saudáveis |
 
 ## Conclusão sobre envio e recebimento reais
 
@@ -215,3 +218,5 @@ Não há definição funcional bloqueante para iniciar a implementação.
 - Concluídos o modelo conceitual e os contratos HTTP v1.
 - Definido que o README evolui com os commits relevantes e documenta apenas o
   estado efetivamente verificável do projeto.
+- Implementada e validada a fundação em monorepo com Go/Gin,
+  React/TypeScript, PostgreSQL, Redis e Docker Compose.

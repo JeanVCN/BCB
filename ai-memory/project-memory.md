@@ -8,7 +8,8 @@
 
 - Projeto: Big Chat Brasil (BCB), desafio técnico Fullstack.
 - Última consolidação: 2026-06-22.
-- Estado atual: planejamento; implementação ainda não autorizada.
+- Estado atual: fundação técnica implementada e validada; próximo incremento
+  é cadastro, ativação, RBAC e autenticação.
 - Fonte inicial: documentos oficiais locais em `docs/` e definições do
   responsável pelo projeto.
 
@@ -28,7 +29,7 @@ Ao surgir uma nova definição:
 
 Construir uma aplicação Fullstack de chat empresarial que permita cadastrar e
 autenticar empresas clientes, manter conversas com seus clientes finais, enviar
-mensagens, controlar custos pré e pó-pagos, processar mensagens em fila e
+mensagens, controlar custos pré e pós-pagos, processar mensagens em fila e
 acompanhar seu estado. A entrega deve favorecer correção, rastreabilidade,
 integração completa e capacidade de explicação durante apresentação e live
 coding.
@@ -56,6 +57,15 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
   meio de bloqueio distribuído, visando segurança no escalonamento horizontal.
 - RabbitMQ não pertence ao escopo inicial. É uma evolução condicionada a
   tempo disponível.
+- O repositório é um monorepo com `backend/`, `frontend/`, infraestrutura e
+  documentação na raiz.
+- A fundação usa Go 1.25+, Gin 1.12, React 19.2, TypeScript 6, Vite 8,
+  PostgreSQL 17 e Redis 8.
+- O servidor HTTP possui timeouts, logs estruturados e shutdown gracioso.
+- `/health/live` representa apenas liveness; readiness será implementada quando
+  o backend passar a abrir conexões com PostgreSQL e Redis.
+- O ambiente Docker completo foi construído e validado com os quatro serviços
+  saudáveis. PostgreSQL e Redis ainda não são consumidos pelo backend.
 
 ### Documentação
 

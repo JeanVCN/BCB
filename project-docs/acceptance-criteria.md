@@ -5,7 +5,7 @@ não define endpoints, banco de dados ou estrutura de código.
 
 ## 1. Ambiente e entrega
 
-- [ ] Todo o ambiente necessário pode ser iniciado com Docker.
+- [x] Todo o ambiente necessário pode ser iniciado com Docker.
 - [ ] Backend, frontend, PostgreSQL e Redis conseguem se comunicar no ambiente
   documentado.
 - [ ] Uma instalação limpa possui um caminho documentado para criar o primeiro

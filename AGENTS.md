@@ -7,6 +7,7 @@ Antes de analisar, planejar ou alterar este projeto, leia integralmente:
 3. `project-docs/acceptance-criteria.md`
 4. `project-docs/domain-model.md`
 5. `project-docs/api-contracts.md`
+6. `project-docs/technical-foundation.md`
 
 ## Regra de continuidade
 

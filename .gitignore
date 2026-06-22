@@ -1,1 +1,20 @@
 /docs/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/src/assets/hero.png
+
+# Backend
+backend/bin/
+backend/coverage.out
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
