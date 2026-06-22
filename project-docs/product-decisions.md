@@ -43,6 +43,7 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Cadastro rejeitado | Preservado e reconsiderável, sem duplicar documento | Manter auditoria e unicidade |
 | Sessão | Token de uma hora, sem renovação automática | Manter segurança e escopo inicial simples |
 | Ordem da fila | Urgente antes de normal; FIFO dentro da prioridade | Cumprir prioridade sem perder previsibilidade |
+| README evolutivo | Atualizar em cada commit relevante e distinguir planejado de entregue | Manter a apresentação confiável durante toda a construção |
 
 ## Conclusão sobre envio e recebimento reais
 
@@ -212,3 +213,5 @@ Não há definição funcional bloqueante para iniciar a implementação.
 - Aprovados bootstrap administrativo, plano solicitado no cadastro, retenção
   de rejeitados, resposta de espera, sessão de uma hora e prioridade da fila.
 - Concluídos o modelo conceitual e os contratos HTTP v1.
+- Definido que o README evolui com os commits relevantes e documenta apenas o
+  estado efetivamente verificável do projeto.

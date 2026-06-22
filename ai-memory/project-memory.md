@@ -216,6 +216,11 @@ Somente depois do essencial estar estável, avaliar:
   entrega.
 - Tags opcionais de marco: `planning-complete` após o planejamento e `v0.1.0`
   ou `mvp-complete` após o fluxo mínimo integrado.
+- O README oficial deve evoluir junto de cada commit relevante, refletindo
+  somente funcionalidades realmente disponíveis, instruções verificadas,
+  limitações vigentes e o estado atual do roadmap.
+- Nunca apresentar no README uma tecnologia planejada como implementada nem
+  publicar instruções de execução que ainda não foram validadas.
 
 ## Pendências abertas
 
