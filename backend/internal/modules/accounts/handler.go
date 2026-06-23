@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"bcb/backend/internal/domain"
 	"bcb/backend/internal/httpserver/response"
 	"bcb/backend/internal/modules/access"
 	"github.com/gin-gonic/gin"
@@ -41,7 +42,7 @@ func (handler *Handler) Register(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusCreated, gin.H{
 		"clientId": clientID,
-		"status":   "pending",
+		"status":   domain.ClientStatusPending,
 		"message":  "Cadastro recebido e aguardando aprovação.",
 	})
 }
@@ -65,8 +66,8 @@ func (handler *Handler) Activate(ctx *gin.Context) {
 		response.Error(ctx, http.StatusBadRequest, "invalid_request", "Condição financeira inválida.", nil)
 		return
 	}
-	if (request.PlanType == "prepaid" && request.TotalLimitCents != 0) ||
-		(request.PlanType == "postpaid" && request.InitialBalanceCents != 0) {
+	if (request.PlanType == string(domain.PlanPrepaid) && request.TotalLimitCents != 0) ||
+		(request.PlanType == string(domain.PlanPostpaid) && request.InitialBalanceCents != 0) {
 		response.Error(ctx, http.StatusUnprocessableEntity, "billing_profile_invalid", "Informe apenas os valores aplicáveis ao plano solicitado.", nil)
 		return
 	}
@@ -79,11 +80,11 @@ func (handler *Handler) Activate(ctx *gin.Context) {
 }
 
 func (handler *Handler) Reject(ctx *gin.Context) {
-	handler.changeStatus(ctx, "rejected")
+	handler.changeStatus(ctx, string(domain.ClientStatusRejected))
 }
 
 func (handler *Handler) Deactivate(ctx *gin.Context) {
-	handler.changeStatus(ctx, "inactive")
+	handler.changeStatus(ctx, string(domain.ClientStatusInactive))
 }
 
 func (handler *Handler) changeStatus(ctx *gin.Context, status string) {

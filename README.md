@@ -24,8 +24,8 @@ consistência, concorrência, integração e evolução arquitetural.
 
 > **Estado atual:** ambiente executável com frontend, API, PostgreSQL e Redis,
 > autocadastro, autenticação, ativação administrativa, RBAC inicial, conversas
-> financeiro, envio simulado com cobrança, fila persistente, worker, retry,
-> estorno e readiness real das dependências.
+> financeiro, envio simulado com cobrança, fila persistente, worker dedicado,
+> retry, estorno e readiness real das dependências.
 
 ## Experiência planejada
 
@@ -46,7 +46,7 @@ enfileiramento, processamento e atualização de status.
 
 | Camada | Tecnologia | Estado atual |
 |---|---|---|
-| Backend | Go 1.25+ e Gin 1.12 | Auth, RBAC, conversas, financeiro, mensagens, worker e health checks |
+| Backend | Go 1.25+ e Gin 1.12 | Auth, RBAC, conversas, financeiro, mensagens, worker dedicado e health checks |
 | Frontend | React 19.2, TypeScript 6 e Vite 8 | Onboarding, login, admin básico, conversas, financeiro e envio |
 | Persistência | PostgreSQL 17 | Integrado ao backend via migrations |
 | Coordenação | Redis 8 | Rate limit de login e lock financeiro |

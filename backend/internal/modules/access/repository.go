@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"bcb/backend/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,15 +22,15 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 func (repository *Repository) BootstrapAdmin(ctx context.Context, login, passwordHash string) error {
 	_, err := repository.pool.Exec(ctx, `
 		INSERT INTO users (id, role, login, password_hash, enabled)
-		VALUES ($1, 'admin', $2, $3, TRUE)
-		ON CONFLICT (login) DO NOTHING`, uuid.NewString(), login, passwordHash)
+		VALUES ($1, $2, $3, $4, TRUE)
+		ON CONFLICT (login) DO NOTHING`, uuid.NewString(), domain.RoleAdmin, login, passwordHash)
 	if err != nil {
 		return fmt.Errorf("bootstrap admin: %w", err)
 	}
 	return nil
 }
 
-func (repository *Repository) UserByLogin(ctx context.Context, login string) (User, error) {
+func (repository *Repository) userByLogin(ctx context.Context, login string) (User, error) {
 	var user User
 	err := repository.pool.QueryRow(ctx, `
 		SELECT u.id, u.role, u.login, u.password_hash, u.enabled,

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"bcb/backend/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -132,9 +133,9 @@ type queryer interface {
 }
 
 func ensureActiveClient(ctx context.Context, query queryer, clientID string) error {
-	var status string
-	err := query.QueryRow(ctx, `SELECT status FROM client_accounts WHERE id = $1`, clientID).Scan(&status)
-	if errors.Is(err, pgx.ErrNoRows) || status != "active" {
+	var status domain.ClientStatus
+	err := query.QueryRow(ctx, `SELECT ca.status FROM client_accounts AS ca WHERE ca.id = $1`, clientID).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) || status != domain.ClientStatusActive {
 		return ErrClientInactive
 	}
 	if err != nil {

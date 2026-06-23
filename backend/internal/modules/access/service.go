@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"strings"
+
+	"bcb/backend/internal/domain"
 )
 
 var (
@@ -18,32 +20,32 @@ type Service struct {
 	limiter    *RateLimiter
 }
 
-func NewService(repository *Repository, tokens *TokenService, limiter *RateLimiter) *Service {
+func newService(repository *Repository, tokens *TokenService, limiter *RateLimiter) *Service {
 	return &Service{repository: repository, tokens: tokens, limiter: limiter}
 }
 
-func (service *Service) Login(ctx context.Context, login, password string) (string, User, error) {
+func (service *Service) login(ctx context.Context, login, password string) (string, User, error) {
 	normalizedLogin := normalizeLogin(login)
-	if _, blocked, err := service.limiter.Blocked(ctx, normalizedLogin); err != nil {
+	if _, blocked, err := service.limiter.blocked(ctx, normalizedLogin); err != nil {
 		return "", User{}, err
 	} else if blocked {
 		return "", User{}, ErrRateLimited
 	}
 
-	user, err := service.repository.UserByLogin(ctx, normalizedLogin)
-	if err != nil || !VerifyPassword(password, user.PasswordHash) {
-		_ = service.limiter.RegisterFailure(ctx, normalizedLogin)
+	user, err := service.repository.userByLogin(ctx, normalizedLogin)
+	if err != nil || !verifyPassword(password, user.PasswordHash) {
+		_ = service.limiter.registerFailure(ctx, normalizedLogin)
 		return "", User{}, ErrInvalidCredentials
 	}
-	if !user.Enabled || (user.Role == "client" && (user.ClientStatus == nil || *user.ClientStatus != "active")) {
-		_ = service.limiter.RegisterFailure(ctx, normalizedLogin)
+	if !user.Enabled || (user.Role == domain.RoleClient && (user.ClientStatus == nil || *user.ClientStatus != string(domain.ClientStatusActive))) {
+		_ = service.limiter.registerFailure(ctx, normalizedLogin)
 		return "", User{}, ErrClientInactive
 	}
 
-	if err := service.limiter.Reset(ctx, normalizedLogin); err != nil {
+	if err := service.limiter.reset(ctx, normalizedLogin); err != nil {
 		return "", User{}, err
 	}
-	token, err := service.tokens.Issue(user)
+	token, err := service.tokens.issue(user)
 	return token, user, err
 }
 

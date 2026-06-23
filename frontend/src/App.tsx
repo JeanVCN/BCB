@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { api } from './api'
-import type { BillingProfile, Client, Conversation, FinancialTransaction, Message, Plan, Session } from './api'
+import type { BillingProfile, Client, Conversation, FinancialTransaction, Message, Session } from './api'
+import { clientStatuses, channels, documentTypes, financialTransactionTypes, messageStatuses, plans, priorities, roles } from './domain'
+import type { Plan } from './domain'
 import './App.css'
 
 type View = 'login' | 'register' | 'pending'
@@ -53,10 +55,10 @@ function App() {
     } finally { setLoading(false) }
   }
 
-  if (session?.user.role === 'admin') {
+  if (session?.user.role === roles.admin) {
     return <AdminDashboard session={session} onLogout={() => saveSession(null)} />
   }
-  if (session?.user.role === 'client') {
+  if (session?.user.role === roles.client) {
     return <ClientHome session={session} onLogout={() => saveSession(null)} />
   }
 
@@ -94,10 +96,10 @@ function App() {
                 <h2>Cadastre sua empresa</h2>
                 <label>Nome ou razão social<input name="name" required /></label>
                 <div className="field-row">
-                  <label>Documento<select name="documentType"><option value="cpf">CPF</option><option value="cnpj">CNPJ</option></select></label>
+                  <label>Documento<select name="documentType"><option value={documentTypes.cpf}>CPF</option><option value={documentTypes.cnpj}>CNPJ</option></select></label>
                   <label>Número<input name="documentId" inputMode="numeric" required /></label>
                 </div>
-                <label>Plano desejado<select name="requestedPlan"><option value="prepaid">Pré-pago</option><option value="postpaid">Pós-pago</option></select></label>
+                <label>Plano desejado<select name="requestedPlan"><option value={plans.prepaid}>Pré-pago</option><option value={plans.postpaid}>Pós-pago</option></select></label>
                 <label>Senha<input name="password" type="password" minLength={9} maxLength={128} required autoComplete="new-password" /><small>9+ caracteres, com letras, números e caractere especial.</small></label>
                 <Submit loading={loading} label="Solicitar cadastro" />
               </form>
@@ -239,16 +241,16 @@ function ClientHome({ session, onLogout }: { session: Session; onLogout: () => v
         <section className="summary-grid">
           <article className="metric-card">
             <span>Plano atual</span>
-            <strong>{billing.planType === 'prepaid' ? 'Pré-pago' : 'Pós-pago'}</strong>
+            <strong>{billing.planType === plans.prepaid ? 'Pré-pago' : 'Pós-pago'}</strong>
           </article>
           <article className="metric-card">
             <span>Disponível</span>
             <strong>{formatMoney(billing.currentPlanAvailableCents)}</strong>
           </article>
           <article className="metric-card">
-            <span>{billing.planType === 'prepaid' ? 'Saldo' : 'Consumo / limite'}</span>
+            <span>{billing.planType === plans.prepaid ? 'Saldo' : 'Consumo / limite'}</span>
             <strong>
-              {billing.planType === 'prepaid'
+              {billing.planType === plans.prepaid
                 ? formatMoney(billing.prepaidBalanceCents)
                 : `${formatMoney(billing.postpaidConsumedCents)} / ${formatMoney(billing.postpaidTotalLimitCents)}`}
             </strong>
@@ -297,7 +299,7 @@ function ClientHome({ session, onLogout }: { session: Session; onLogout: () => v
                   <article key={message.id} className={`message-card ${message.status}`}>
                     <p>{message.content}</p>
                     <footer>
-                      <span>{message.channel.toUpperCase()} · {message.priority === 'urgent' ? 'Urgente' : 'Normal'} · {formatMoney(message.costCents)}</span>
+                      <span>{message.channel.toUpperCase()} · {message.priority === priorities.urgent ? 'Urgente' : 'Normal'} · {formatMoney(message.costCents)}</span>
                       <strong>{messageStatusLabel(message.status)}</strong>
                     </footer>
                     {message.failureCode && <small>Falha: {message.failureCode}</small>}
@@ -307,8 +309,8 @@ function ClientHome({ session, onLogout }: { session: Session; onLogout: () => v
               <form onSubmit={sendMessage} className="message-form">
                 <label>Mensagem<textarea name="content" required rows={3} placeholder="Digite a mensagem. Use [fail] ou [retry] para simular falhas." /></label>
                 <div className="field-row">
-                  <label>Canal<select name="channel" defaultValue="whatsapp"><option value="whatsapp">WhatsApp</option><option value="sms">SMS</option></select></label>
-                  <label>Prioridade<select name="priority" defaultValue="normal"><option value="normal">Normal · R$ 0,25</option><option value="urgent">Urgente · R$ 0,50</option></select></label>
+                  <label>Canal<select name="channel" defaultValue={channels.whatsapp}><option value={channels.whatsapp}>WhatsApp</option><option value={channels.sms}>SMS</option></select></label>
+                  <label>Prioridade<select name="priority" defaultValue={priorities.normal}><option value={priorities.normal}>Normal · R$ 0,25</option><option value={priorities.urgent}>Urgente · R$ 0,50</option></select></label>
                 </div>
                 <Submit loading={loading} label="Enviar mensagem" />
               </form>
@@ -348,11 +350,11 @@ function AdminDashboard({ session, onLogout }: { session: Session; onLogout: () 
   }, [token])
 
   async function activate(client: Client) {
-    const amount = Number(prompt(client.requestedPlan === 'prepaid' ? 'Saldo inicial em centavos' : 'Limite total em centavos', '0'))
+    const amount = Number(prompt(client.requestedPlan === plans.prepaid ? 'Saldo inicial em centavos' : 'Limite total em centavos', '0'))
     if (!Number.isSafeInteger(amount) || amount < 0) return
-    const body = client.requestedPlan === 'prepaid'
-      ? { planType: 'prepaid' as Plan, initialBalanceCents: amount }
-      : { planType: 'postpaid' as Plan, totalLimitCents: amount }
+    const body = client.requestedPlan === plans.prepaid
+      ? { planType: plans.prepaid as Plan, initialBalanceCents: amount }
+      : { planType: plans.postpaid as Plan, totalLimitCents: amount }
     try { await api.activate(token, client.id, body); await refresh() } catch (reason) { setError(reason instanceof Error ? reason.message : 'Erro inesperado.') }
   }
 
@@ -401,7 +403,7 @@ function AdminDashboard({ session, onLogout }: { session: Session; onLogout: () 
     }
   }
 
-  return <main className="dashboard"><header><div><span className="eyebrow">Administração</span><h1>Clientes</h1></div><button onClick={onLogout}>Sair</button></header>{error && <p className="error">{error}</p>}<section className="client-list">{clients.length === 0 ? <div className="empty-state"><h2>Nenhum cadastro</h2><p>Novas solicitações aparecerão aqui.</p></div> : clients.map(client => <article key={client.id} className="client-card"><div><span className={`pill ${client.status}`}>{client.status}</span><h2>{client.name}</h2><p>{client.documentType.toUpperCase()} · {client.documentId}</p><small>Plano solicitado: {client.requestedPlan === 'prepaid' ? 'Pré-pago' : 'Pós-pago'}</small></div><div className="actions">{client.status !== 'active' ? <><button className="primary" onClick={() => void activate(client)}>Ativar</button>{client.status === 'pending' && <button onClick={() => void reject(client)}>Rejeitar</button>}</> : <><button className="primary" onClick={() => client.requestedPlan === 'prepaid' ? void addCredit(client) : void setPostpaidLimit(client)}>{client.requestedPlan === 'prepaid' ? 'Adicionar crédito' : 'Ajustar limite'}</button><button onClick={() => void showTransactions(client)}>Histórico</button></>}</div></article>)}</section></main>
+  return <main className="dashboard"><header><div><span className="eyebrow">Administração</span><h1>Clientes</h1></div><button onClick={onLogout}>Sair</button></header>{error && <p className="error">{error}</p>}<section className="client-list">{clients.length === 0 ? <div className="empty-state"><h2>Nenhum cadastro</h2><p>Novas solicitações aparecerão aqui.</p></div> : clients.map(client => <article key={client.id} className="client-card"><div><span className={`pill ${client.status}`}>{client.status}</span><h2>{client.name}</h2><p>{client.documentType.toUpperCase()} · {client.documentId}</p><small>Plano solicitado: {client.requestedPlan === plans.prepaid ? 'Pré-pago' : 'Pós-pago'}</small></div><div className="actions">{client.status !== clientStatuses.active ? <><button className="primary" onClick={() => void activate(client)}>Ativar</button>{client.status === clientStatuses.pending && <button onClick={() => void reject(client)}>Rejeitar</button>}</> : <><button className="primary" onClick={() => client.requestedPlan === plans.prepaid ? void addCredit(client) : void setPostpaidLimit(client)}>{client.requestedPlan === plans.prepaid ? 'Adicionar crédito' : 'Ajustar limite'}</button><button onClick={() => void showTransactions(client)}>Histórico</button></>}</div></article>)}</section></main>
 }
 
 function formatMoney(cents: number) {
@@ -410,21 +412,21 @@ function formatMoney(cents: number) {
 
 function transactionLabel(type: FinancialTransaction['type']) {
   const labels: Record<FinancialTransaction['type'], string> = {
-    credit: 'Crédito',
-    debit: 'Débito',
-    consumption: 'Consumo',
-    refund: 'Estorno',
-    consumption_reversal: 'Reversão de consumo',
+    [financialTransactionTypes.credit]: 'Crédito',
+    [financialTransactionTypes.debit]: 'Débito',
+    [financialTransactionTypes.consumption]: 'Consumo',
+    [financialTransactionTypes.refund]: 'Estorno',
+    [financialTransactionTypes.consumptionReversal]: 'Reversão de consumo',
   }
   return labels[type]
 }
 
 function messageStatusLabel(status: Message['status']) {
   const labels: Record<Message['status'], string> = {
-    queued: 'Na fila',
-    processing: 'Processando',
-    sent: 'Enviada',
-    failed: 'Falhou',
+    [messageStatuses.queued]: 'Na fila',
+    [messageStatuses.processing]: 'Processando',
+    [messageStatuses.sent]: 'Enviada',
+    [messageStatuses.failed]: 'Falhou',
   }
   return labels[status]
 }

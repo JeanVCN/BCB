@@ -4,12 +4,13 @@ import (
 	"errors"
 	"time"
 
+	"bcb/backend/internal/domain"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type Claims struct {
-	Role     string  `json:"role"`
-	ClientID *string `json:"clientId,omitempty"`
+	Role     domain.Role `json:"role"`
+	ClientID *string     `json:"clientId,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -17,11 +18,11 @@ type TokenService struct {
 	secret []byte
 }
 
-func NewTokenService(secret string) *TokenService {
+func newTokenService(secret string) *TokenService {
 	return &TokenService{secret: []byte(secret)}
 }
 
-func (service *TokenService) Issue(user User) (string, error) {
+func (service *TokenService) issue(user User) (string, error) {
 	now := time.Now().UTC()
 	claims := Claims{
 		Role:     user.Role,

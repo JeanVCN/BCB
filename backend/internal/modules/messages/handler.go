@@ -54,13 +54,13 @@ func (handler *Handler) writeError(ctx *gin.Context, err error) {
 		response.Error(ctx, http.StatusBadRequest, "missing_idempotency_key", "Informe a chave de idempotência.", nil)
 	case errors.Is(err, ErrInvalidMessage):
 		response.Error(ctx, http.StatusUnprocessableEntity, "message_invalid", "Informe uma mensagem válida com canal e prioridade suportados.", nil)
-	case errors.Is(err, ErrClientInactive):
+	case errors.Is(err, ErrClientInactive), errors.Is(err, billing.ErrClientNotActive):
 		response.Error(ctx, http.StatusForbidden, "client_not_active", "Empresa cliente inativa ou indisponível.", nil)
 	case errors.Is(err, ErrConversationNotFound):
 		response.Error(ctx, http.StatusNotFound, "conversation_not_found", "Conversa não encontrada.", nil)
-	case errors.Is(err, ErrInsufficientBalance):
+	case errors.Is(err, billing.ErrInsufficientBalance):
 		response.Error(ctx, http.StatusUnprocessableEntity, "insufficient_balance", "Saldo insuficiente para enviar a mensagem.", nil)
-	case errors.Is(err, ErrLimitExceeded):
+	case errors.Is(err, billing.ErrLimitExceeded):
 		response.Error(ctx, http.StatusUnprocessableEntity, "limit_exceeded", "Limite pós-pago insuficiente para enviar a mensagem.", nil)
 	case errors.Is(err, ErrIdempotencyConflict):
 		response.Error(ctx, http.StatusConflict, "idempotency_conflict", "A chave de idempotência já foi usada com outro conteúdo.", nil)

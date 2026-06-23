@@ -2,19 +2,10 @@ package messages
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
-	"math/big"
 	"strings"
-	"time"
 
 	"bcb/backend/internal/modules/billing"
-)
-
-const (
-	normalCostCents = int64(25)
-	urgentCostCents = int64(50)
-	maxAttempts     = 4
 )
 
 type Service struct {
@@ -28,10 +19,10 @@ func NewService(repository *Repository, locks *billing.LockManager) *Service {
 
 func (service *Service) Send(ctx context.Context, clientID, requestedByUserID, conversationID, content, channel, priority, idempotencyKey string) (SendResult, error) {
 	content = strings.TrimSpace(content)
-	channel = strings.TrimSpace(strings.ToLower(channel))
-	priority = strings.TrimSpace(strings.ToLower(priority))
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
-	if content == "" || !validChannel(channel) || !validPriority(priority) {
+	parsedChannel, validChannel := parseChannel(channel)
+	parsedPriority, validPriority := parsePriority(priority)
+	if content == "" || !validChannel || !validPriority {
 		return SendResult{}, ErrInvalidMessage
 	}
 	if idempotencyKey == "" {
@@ -43,11 +34,11 @@ func (service *Service) Send(ctx context.Context, clientID, requestedByUserID, c
 		ConversationID:    conversationID,
 		RequestedByUserID: requestedByUserID,
 		Content:           content,
-		Channel:           channel,
-		Priority:          priority,
-		CostCents:         cost(priority),
+		Channel:           parsedChannel,
+		Priority:          parsedPriority,
+		CostCents:         messageCost(parsedPriority),
 		IdempotencyKey:    idempotencyKey,
-		RequestHash:       RequestHash(content, channel, priority),
+		RequestHash:       requestHash(content, parsedChannel, parsedPriority),
 	}
 
 	var result SendResult
@@ -64,38 +55,4 @@ func (service *Service) Send(ctx context.Context, clientID, requestedByUserID, c
 
 func (service *Service) List(ctx context.Context, clientID, conversationID string) ([]Message, error) {
 	return service.repository.List(ctx, clientID, conversationID)
-}
-
-func cost(priority string) int64 {
-	if priority == "urgent" {
-		return urgentCostCents
-	}
-	return normalCostCents
-}
-
-func validChannel(channel string) bool {
-	return channel == "sms" || channel == "whatsapp"
-}
-
-func validPriority(priority string) bool {
-	return priority == "normal" || priority == "urgent"
-}
-
-func retryDelay(attempt int) time.Duration {
-	base := 4 * time.Second
-	switch attempt {
-	case 1:
-		base = time.Second
-	case 2:
-		base = 2 * time.Second
-	}
-	return base + retryJitter()
-}
-
-func retryJitter() time.Duration {
-	value, err := rand.Int(rand.Reader, big.NewInt(250))
-	if err != nil {
-		return 0
-	}
-	return time.Duration(value.Int64()) * time.Millisecond
 }

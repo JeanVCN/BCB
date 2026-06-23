@@ -2,6 +2,19 @@ package billing
 
 import "time"
 
+type MessageChargeCommand struct {
+	ClientID       string
+	MessageID      string
+	ActorUserID    string
+	AmountCents    int64
+	IdempotencyKey string
+}
+
+type MessageChargeResult struct {
+	TransactionID string
+	Profile       Profile
+}
+
 type Profile struct {
 	PlanType                  string    `json:"planType"`
 	PrepaidBalanceCents       int64     `json:"prepaidBalanceCents"`

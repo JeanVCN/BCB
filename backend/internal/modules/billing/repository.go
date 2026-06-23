@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 
+	"bcb/backend/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -19,6 +20,8 @@ var (
 	ErrClientNotActive     = errors.New("client is not active")
 	ErrPlanMismatch        = errors.New("operation is not allowed for current plan")
 	ErrLimitBelowConsumed  = errors.New("postpaid limit is below consumed amount")
+	ErrInsufficientBalance = errors.New("insufficient prepaid balance")
+	ErrLimitExceeded       = errors.New("postpaid limit exceeded")
 	ErrIdempotencyConflict = errors.New("idempotency key was used with a different request")
 	ErrAlreadyProcessed    = errors.New("operation already processed")
 )
@@ -31,231 +34,170 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-func (repository *Repository) Profile(ctx context.Context, clientID string) (Profile, error) {
-	row := repository.pool.QueryRow(ctx, `
-		SELECT billing_profiles.plan_type,
-		       billing_profiles.prepaid_balance_cents,
-		       billing_profiles.postpaid_total_limit_cents,
-		       billing_profiles.postpaid_consumed_cents,
-		       billing_profiles.updated_at,
-		       client_accounts.status
-		FROM billing_profiles
-		JOIN client_accounts ON client_accounts.id = billing_profiles.client_account_id
-		WHERE billing_profiles.client_account_id = $1`, clientID)
-	profile, status, err := scanProfileWithStatus(row)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Profile{}, ErrProfileNotFound
-	}
+func (repository *Repository) chargeMessage(ctx context.Context, tx pgx.Tx, command MessageChargeCommand) (MessageChargeResult, error) {
+	profile, err := repository.lockActiveProfile(ctx, tx, command.ClientID)
 	if err != nil {
-		return Profile{}, fmt.Errorf("read billing profile: %w", err)
+		return MessageChargeResult{}, err
 	}
-	if status != "active" {
-		return Profile{}, ErrClientNotActive
+
+	transactionID := newID()
+	transactionType, err := repository.applyChargeToProfile(ctx, tx, command.ClientID, command.AmountCents, &profile)
+	if err != nil {
+		return MessageChargeResult{}, err
 	}
-	return profile, nil
+
+	if err := repository.insertFinancialTransaction(ctx, tx, financialTransactionInput{
+		ID:             transactionID,
+		ClientID:       command.ClientID,
+		Type:           transactionType,
+		AmountCents:    command.AmountCents,
+		MessageID:      command.MessageID,
+		ActorUserID:    command.ActorUserID,
+		IdempotencyKey: command.IdempotencyKey,
+		Reason:         "Cobrança de mensagem",
+	}); err != nil {
+		return MessageChargeResult{}, err
+	}
+
+	return MessageChargeResult{TransactionID: transactionID, Profile: profile}, nil
 }
 
-func (repository *Repository) Transactions(ctx context.Context, clientID string) ([]Transaction, error) {
-	rows, err := repository.pool.Query(ctx, `
-		SELECT id::text, type, amount_cents, message_id::text, reverses_transaction_id::text,
-		       actor_user_id::text, idempotency_key, reason, created_at
-		FROM financial_transactions
-		WHERE client_account_id = $1
-		ORDER BY created_at DESC`, clientID)
-	if err != nil {
-		return nil, fmt.Errorf("list financial transactions: %w", err)
-	}
-	defer rows.Close()
+func (repository *Repository) profileInTransaction(ctx context.Context, tx pgx.Tx, clientID string) (Profile, error) {
+	return repository.lockActiveProfile(ctx, tx, clientID)
+}
 
-	transactions := make([]Transaction, 0)
-	for rows.Next() {
-		var transaction Transaction
-		if err := rows.Scan(
-			&transaction.ID,
-			&transaction.Type,
-			&transaction.AmountCents,
-			&transaction.MessageID,
-			&transaction.ReversesTransactionID,
-			&transaction.ActorUserID,
-			&transaction.IdempotencyKey,
-			&transaction.Reason,
-			&transaction.CreatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("scan financial transaction: %w", err)
+func (repository *Repository) reverseMessageCharge(ctx context.Context, tx pgx.Tx, messageID string) error {
+	charge, found, err := repository.findOriginalMessageCharge(ctx, tx, messageID)
+	if err != nil || !found {
+		return err
+	}
+
+	reversed, err := repository.chargeAlreadyReversed(ctx, tx, charge.TransactionID)
+	if err != nil || reversed {
+		return err
+	}
+
+	reversalType, err := repository.applyChargeReversalToProfile(ctx, tx, charge)
+	if err != nil {
+		return err
+	}
+
+	return repository.insertFinancialTransaction(ctx, tx, financialTransactionInput{
+		ID:                    newID(),
+		ClientID:              charge.ClientID,
+		Type:                  reversalType,
+		AmountCents:           charge.AmountCents,
+		MessageID:             messageID,
+		ReversesTransactionID: charge.TransactionID,
+		IdempotencyKey:        "refund:" + messageID,
+		Reason:                "Estorno por falha definitiva",
+	})
+}
+
+func (repository *Repository) applyChargeToProfile(ctx context.Context, tx pgx.Tx, clientID string, amountCents int64, profile *Profile) (domain.FinancialTransactionType, error) {
+	switch profile.PlanType {
+	case string(domain.PlanPrepaid):
+		if profile.PrepaidBalanceCents < amountCents {
+			return "", ErrInsufficientBalance
 		}
-		transactions = append(transactions, transaction)
-	}
-	return transactions, rows.Err()
-}
-
-func (repository *Repository) AddCredit(ctx context.Context, actorID, clientID string, amountCents int64, reason, idempotencyKey, requestHash string) error {
-	tx, err := repository.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin add credit: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	idempotencyRecordID, err := repository.registerIdempotency(ctx, tx, clientID, "admin.credit", idempotencyKey, requestHash)
-	if err != nil {
-		return err
-	}
-
-	profile, err := repository.lockProfile(ctx, tx, clientID)
-	if err != nil {
-		return err
-	}
-	if profile.PlanType != "prepaid" {
-		return ErrPlanMismatch
-	}
-
-	_, err = tx.Exec(ctx, `
-		UPDATE billing_profiles
-		SET prepaid_balance_cents = prepaid_balance_cents + $2,
-		    version = version + 1,
-		    updated_at = NOW()
-		WHERE client_account_id = $1`, clientID, amountCents)
-	if err != nil {
-		return fmt.Errorf("increase prepaid balance: %w", err)
-	}
-
-	_, err = tx.Exec(ctx, `
-		INSERT INTO financial_transactions (
-			id, client_account_id, type, amount_cents, actor_user_id,
-			idempotency_key, idempotency_record_id, reason
-		) VALUES ($1, $2, 'credit', $3, $4, $5, $6, NULLIF($7, ''))`,
-		uuid.NewString(), clientID, amountCents, actorID, idempotencyKey, idempotencyRecordID, reason,
-	)
-	if err != nil {
-		return fmt.Errorf("insert credit transaction: %w", err)
-	}
-
-	return tx.Commit(ctx)
-}
-
-func (repository *Repository) AdjustPostpaidLimit(ctx context.Context, actorID, clientID string, totalLimitCents int64, reason, idempotencyKey, requestHash string) error {
-	tx, err := repository.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin adjust postpaid limit: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	if _, err := repository.registerIdempotency(ctx, tx, clientID, "admin.postpaid_limit", idempotencyKey, requestHash); err != nil {
-		return err
-	}
-
-	profile, err := repository.lockProfile(ctx, tx, clientID)
-	if err != nil {
-		return err
-	}
-	if profile.PlanType != "postpaid" {
-		return ErrPlanMismatch
-	}
-	if totalLimitCents < profile.PostpaidConsumedCents {
-		return ErrLimitBelowConsumed
-	}
-
-	_, err = tx.Exec(ctx, `
-		UPDATE billing_profiles
-		SET postpaid_total_limit_cents = $2,
-		    version = version + 1,
-		    updated_at = NOW()
-		WHERE client_account_id = $1`, clientID, totalLimitCents)
-	if err != nil {
-		return fmt.Errorf("update postpaid limit: %w", err)
-	}
-
-	if err := insertAudit(ctx, tx, actorID, "billing.postpaid_limit_adjusted", clientID, reason, map[string]any{"totalLimitCents": profile.PostpaidTotalLimitCents}, map[string]any{"totalLimitCents": totalLimitCents}); err != nil {
-		return err
-	}
-	return tx.Commit(ctx)
-}
-
-func (repository *Repository) registerIdempotency(ctx context.Context, tx pgx.Tx, clientID, operation, key, hash string) (string, error) {
-	recordID := uuid.NewString()
-	_, err := tx.Exec(ctx, `
-		INSERT INTO idempotency_records (id, client_account_id, operation, idempotency_key, request_hash)
-		VALUES ($1, $2, $3, $4, $5)`,
-		recordID, clientID, operation, key, hash,
-	)
-	if uniqueViolation(err) {
-		var previousHash string
-		err = tx.QueryRow(ctx, `
-			SELECT request_hash
-			FROM idempotency_records
-			WHERE client_account_id = $1 AND operation = $2 AND idempotency_key = $3`,
-			clientID, operation, key,
-		).Scan(&previousHash)
+		_, err := tx.Exec(ctx, `
+			UPDATE billing_profiles AS bp
+			SET prepaid_balance_cents = bp.prepaid_balance_cents - $2,
+			    version = bp.version + 1,
+			    updated_at = NOW()
+			WHERE bp.client_account_id = $1`, clientID, amountCents)
 		if err != nil {
-			return "", fmt.Errorf("read idempotency record: %w", err)
+			return "", fmt.Errorf("decrease prepaid balance: %w", err)
 		}
-		if previousHash != hash {
-			return "", ErrIdempotencyConflict
+		profile.PrepaidBalanceCents -= amountCents
+		fillProfileAvailability(profile)
+		return domain.FinancialTransactionDebit, nil
+
+	case string(domain.PlanPostpaid):
+		if profile.PostpaidConsumedCents+amountCents > profile.PostpaidTotalLimitCents {
+			return "", ErrLimitExceeded
 		}
-		return "", ErrAlreadyProcessed
+		_, err := tx.Exec(ctx, `
+			UPDATE billing_profiles AS bp
+			SET postpaid_consumed_cents = bp.postpaid_consumed_cents + $2,
+			    version = bp.version + 1,
+			    updated_at = NOW()
+			WHERE bp.client_account_id = $1`, clientID, amountCents)
+		if err != nil {
+			return "", fmt.Errorf("increase postpaid consumption: %w", err)
+		}
+		profile.PostpaidConsumedCents += amountCents
+		fillProfileAvailability(profile)
+		return domain.FinancialTransactionConsumption, nil
+
+	default:
+		return "", ErrPlanMismatch
 	}
-	if err != nil {
-		return "", fmt.Errorf("insert idempotency record: %w", err)
-	}
-	return recordID, nil
 }
 
-func (repository *Repository) lockProfile(ctx context.Context, tx pgx.Tx, clientID string) (Profile, error) {
-	row := tx.QueryRow(ctx, `
-		SELECT plan_type, prepaid_balance_cents, postpaid_total_limit_cents,
-		       postpaid_consumed_cents, updated_at
-		FROM billing_profiles
-		WHERE client_account_id = $1
-		FOR UPDATE`, clientID)
-	profile, err := scanProfile(row)
+func (repository *Repository) applyChargeReversalToProfile(ctx context.Context, tx pgx.Tx, charge originalMessageCharge) (domain.FinancialTransactionType, error) {
+	switch charge.Type {
+	case domain.FinancialTransactionDebit:
+		_, err := tx.Exec(ctx, `
+			UPDATE billing_profiles AS bp
+			SET prepaid_balance_cents = bp.prepaid_balance_cents + $2,
+			    version = bp.version + 1,
+			    updated_at = NOW()
+			WHERE bp.client_account_id = $1`, charge.ClientID, charge.AmountCents)
+		if err != nil {
+			return "", fmt.Errorf("refund prepaid charge: %w", err)
+		}
+		return domain.FinancialTransactionRefund, nil
+
+	case domain.FinancialTransactionConsumption:
+		_, err := tx.Exec(ctx, `
+			UPDATE billing_profiles AS bp
+			SET postpaid_consumed_cents = bp.postpaid_consumed_cents - $2,
+			    version = bp.version + 1,
+			    updated_at = NOW()
+			WHERE bp.client_account_id = $1 AND bp.postpaid_consumed_cents >= $2`, charge.ClientID, charge.AmountCents)
+		if err != nil {
+			return "", fmt.Errorf("reverse postpaid consumption: %w", err)
+		}
+		return domain.FinancialTransactionConsumptionReversal, nil
+
+	default:
+		return "", fmt.Errorf("unsupported charge type for reversal: %s", charge.Type)
+	}
+}
+
+type originalMessageCharge struct {
+	TransactionID string
+	ClientID      string
+	Type          domain.FinancialTransactionType
+	AmountCents   int64
+}
+
+func (repository *Repository) findOriginalMessageCharge(ctx context.Context, tx pgx.Tx, messageID string) (originalMessageCharge, bool, error) {
+	var charge originalMessageCharge
+	err := tx.QueryRow(ctx, `
+		SELECT ft.id::text,
+		       ft.client_account_id::text,
+		       ft.type,
+		       ft.amount_cents
+		FROM financial_transactions AS ft
+		WHERE ft.message_id = $1 AND ft.type IN ($2, $3)
+		FOR UPDATE`,
+		messageID,
+		domain.FinancialTransactionDebit,
+		domain.FinancialTransactionConsumption,
+	).Scan(&charge.TransactionID, &charge.ClientID, &charge.Type, &charge.AmountCents)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Profile{}, ErrProfileNotFound
+		return originalMessageCharge{}, false, nil
 	}
 	if err != nil {
-		return Profile{}, fmt.Errorf("lock billing profile: %w", err)
+		return originalMessageCharge{}, false, fmt.Errorf("read original charge: %w", err)
 	}
-	return profile, nil
+	return charge, true, nil
 }
 
-func scanProfile(row pgx.Row) (Profile, error) {
-	var profile Profile
-	if err := row.Scan(
-		&profile.PlanType,
-		&profile.PrepaidBalanceCents,
-		&profile.PostpaidTotalLimitCents,
-		&profile.PostpaidConsumedCents,
-		&profile.UpdatedAt,
-	); err != nil {
-		return Profile{}, err
-	}
-	profile.PostpaidAvailableCents = profile.PostpaidTotalLimitCents - profile.PostpaidConsumedCents
-	if profile.PlanType == "prepaid" {
-		profile.CurrentPlanAvailableCents = profile.PrepaidBalanceCents
-	} else {
-		profile.CurrentPlanAvailableCents = profile.PostpaidAvailableCents
-	}
-	return profile, nil
-}
-
-func scanProfileWithStatus(row pgx.Row) (Profile, string, error) {
-	var profile Profile
-	var status string
-	if err := row.Scan(
-		&profile.PlanType,
-		&profile.PrepaidBalanceCents,
-		&profile.PostpaidTotalLimitCents,
-		&profile.PostpaidConsumedCents,
-		&profile.UpdatedAt,
-		&status,
-	); err != nil {
-		return Profile{}, "", err
-	}
-	profile.PostpaidAvailableCents = profile.PostpaidTotalLimitCents - profile.PostpaidConsumedCents
-	if profile.PlanType == "prepaid" {
-		profile.CurrentPlanAvailableCents = profile.PrepaidBalanceCents
-	} else {
-		profile.CurrentPlanAvailableCents = profile.PostpaidAvailableCents
-	}
-	return profile, status, nil
+func newID() string {
+	return uuid.NewString()
 }
 
 func RequestHash(operation string, payload any) string {
@@ -265,20 +207,6 @@ func RequestHash(operation string, payload any) string {
 	}{Operation: operation, Payload: payload})
 	sum := sha256.Sum256(encoded)
 	return hex.EncodeToString(sum[:])
-}
-
-func insertAudit(ctx context.Context, tx pgx.Tx, actorID, action, targetID, reason string, previous, next any) error {
-	previousJSON, _ := json.Marshal(previous)
-	nextJSON, _ := json.Marshal(next)
-	_, err := tx.Exec(ctx, `
-		INSERT INTO audit_events (id, actor_user_id, action, target_type, target_id, reason, previous_values, new_values)
-		VALUES ($1, $2, $3, 'client_account', $4, NULLIF($5, ''), $6::jsonb, $7::jsonb)`,
-		uuid.NewString(), actorID, action, targetID, reason, nullableJSON(previousJSON), nullableJSON(nextJSON),
-	)
-	if err != nil {
-		return fmt.Errorf("insert audit event: %w", err)
-	}
-	return nil
 }
 
 func nullableJSON(value []byte) any {

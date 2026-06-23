@@ -21,12 +21,12 @@ type Module struct {
 
 func New(dependencies Dependencies) *Module {
 	repository := NewRepository(dependencies.Postgres)
-	tokens := NewTokenService(dependencies.Config.JWTSecret)
-	service := NewService(repository, tokens, NewRateLimiter(dependencies.Redis))
+	tokens := newTokenService(dependencies.Config.JWTSecret)
+	service := newService(repository, tokens, newRateLimiter(dependencies.Redis))
 
 	return &Module{
 		tokens:  tokens,
-		handler: NewHandler(service),
+		handler: newHandler(service),
 	}
 }
 
@@ -35,6 +35,6 @@ func (module *Module) TokenService() *TokenService {
 }
 
 func (module *Module) RegisterRoutes(public, authenticated *gin.RouterGroup) {
-	public.POST("/auth/login", module.handler.Login)
-	authenticated.GET("/me", module.handler.Me)
+	public.POST("/auth/login", module.handler.login)
+	authenticated.GET("/me", module.handler.me)
 }

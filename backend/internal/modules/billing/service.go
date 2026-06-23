@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
 )
 
 var (
@@ -21,11 +23,23 @@ func NewService(repository *Repository, locks *LockManager) *Service {
 }
 
 func (service *Service) Profile(ctx context.Context, clientID string) (Profile, error) {
-	return service.repository.Profile(ctx, clientID)
+	return service.repository.profile(ctx, clientID)
 }
 
 func (service *Service) Transactions(ctx context.Context, clientID string) ([]Transaction, error) {
-	return service.repository.Transactions(ctx, clientID)
+	return service.repository.transactions(ctx, clientID)
+}
+
+func (service *Service) ChargeMessage(ctx context.Context, tx pgx.Tx, command MessageChargeCommand) (MessageChargeResult, error) {
+	return service.repository.chargeMessage(ctx, tx, command)
+}
+
+func (service *Service) ReverseMessageCharge(ctx context.Context, tx pgx.Tx, messageID string) error {
+	return service.repository.reverseMessageCharge(ctx, tx, messageID)
+}
+
+func (service *Service) ProfileInTransaction(ctx context.Context, tx pgx.Tx, clientID string) (Profile, error) {
+	return service.repository.profileInTransaction(ctx, tx, clientID)
 }
 
 func (service *Service) AddCredit(ctx context.Context, actorID, clientID string, amountCents int64, reason, idempotencyKey string) error {
@@ -38,7 +52,7 @@ func (service *Service) AddCredit(ctx context.Context, actorID, clientID string,
 		Reason      string `json:"reason"`
 	}{AmountCents: amountCents, Reason: reason})
 	return service.locks.WithClientLock(ctx, clientID, func() error {
-		err := service.repository.AddCredit(ctx, actorID, clientID, amountCents, reason, strings.TrimSpace(idempotencyKey), hash)
+		err := service.repository.addCredit(ctx, actorID, clientID, amountCents, reason, strings.TrimSpace(idempotencyKey), hash)
 		if errors.Is(err, ErrAlreadyProcessed) {
 			return nil
 		}
@@ -56,7 +70,7 @@ func (service *Service) AdjustPostpaidLimit(ctx context.Context, actorID, client
 		Reason          string `json:"reason"`
 	}{TotalLimitCents: totalLimitCents, Reason: reason})
 	return service.locks.WithClientLock(ctx, clientID, func() error {
-		err := service.repository.AdjustPostpaidLimit(ctx, actorID, clientID, totalLimitCents, reason, strings.TrimSpace(idempotencyKey), hash)
+		err := service.repository.adjustPostpaidLimit(ctx, actorID, clientID, totalLimitCents, reason, strings.TrimSpace(idempotencyKey), hash)
 		if errors.Is(err, ErrAlreadyProcessed) {
 			return nil
 		}

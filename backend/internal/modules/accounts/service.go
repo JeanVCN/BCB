@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"bcb/backend/internal/domain"
 	"bcb/backend/internal/modules/access"
 )
 
@@ -22,7 +23,7 @@ func (service *Service) Register(ctx context.Context, name, documentType, docume
 	if name == "" {
 		return "", errors.New("name is required")
 	}
-	if plan != "prepaid" && plan != "postpaid" {
+	if plan != string(domain.PlanPrepaid) && plan != string(domain.PlanPostpaid) {
 		return "", errors.New("requestedPlan must be prepaid or postpaid")
 	}
 	normalizedDocument, err := NormalizeDocument(document, documentType)

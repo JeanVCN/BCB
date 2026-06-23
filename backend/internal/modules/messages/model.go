@@ -1,21 +1,25 @@
 package messages
 
-import "time"
+import (
+	"time"
+
+	"bcb/backend/internal/domain"
+)
 
 type Message struct {
-	ID             string     `json:"id"`
-	ConversationID string     `json:"conversationId"`
-	Content        string     `json:"content"`
-	Channel        string     `json:"channel"`
-	Priority       string     `json:"priority"`
-	CostCents      int64      `json:"costCents"`
-	Status         string     `json:"status"`
-	FailureCode    *string    `json:"failureCode,omitempty"`
-	CreatedAt      time.Time  `json:"createdAt"`
-	QueuedAt       time.Time  `json:"queuedAt"`
-	ProcessingAt   *time.Time `json:"processingAt,omitempty"`
-	SentAt         *time.Time `json:"sentAt,omitempty"`
-	FailedAt       *time.Time `json:"failedAt,omitempty"`
+	ID             string               `json:"id"`
+	ConversationID string               `json:"conversationId"`
+	Content        string               `json:"content"`
+	Channel        domain.Channel       `json:"channel"`
+	Priority       domain.Priority      `json:"priority"`
+	CostCents      int64                `json:"costCents"`
+	Status         domain.MessageStatus `json:"status"`
+	FailureCode    *string              `json:"failureCode,omitempty"`
+	CreatedAt      time.Time            `json:"createdAt"`
+	QueuedAt       time.Time            `json:"queuedAt"`
+	ProcessingAt   *time.Time           `json:"processingAt,omitempty"`
+	SentAt         *time.Time           `json:"sentAt,omitempty"`
+	FailedAt       *time.Time           `json:"failedAt,omitempty"`
 }
 
 type SendResult struct {
@@ -24,12 +28,12 @@ type SendResult struct {
 }
 
 type BillingSummary struct {
-	PlanType                  string `json:"planType"`
-	PrepaidBalanceCents       int64  `json:"prepaidBalanceCents"`
-	PostpaidTotalLimitCents   int64  `json:"postpaidTotalLimitCents"`
-	PostpaidConsumedCents     int64  `json:"postpaidConsumedCents"`
-	PostpaidAvailableCents    int64  `json:"postpaidAvailableCents"`
-	CurrentPlanAvailableCents int64  `json:"currentPlanAvailableCents"`
+	PlanType                  domain.PlanType `json:"planType"`
+	PrepaidBalanceCents       int64           `json:"prepaidBalanceCents"`
+	PostpaidTotalLimitCents   int64           `json:"postpaidTotalLimitCents"`
+	PostpaidConsumedCents     int64           `json:"postpaidConsumedCents"`
+	PostpaidAvailableCents    int64           `json:"postpaidAvailableCents"`
+	CurrentPlanAvailableCents int64           `json:"currentPlanAvailableCents"`
 }
 
 type dispatchJob struct {
@@ -38,4 +42,22 @@ type dispatchJob struct {
 	AttemptCount int
 	Content      string
 	StartedAt    time.Time
+}
+
+type SendCommand struct {
+	MessageID         string
+	ClientID          string
+	ConversationID    string
+	RequestedByUserID string
+	Content           string
+	Channel           domain.Channel
+	Priority          domain.Priority
+	CostCents         int64
+	IdempotencyKey    string
+	RequestHash       string
+}
+
+type existingMessage struct {
+	message     Message
+	requestHash string
 }

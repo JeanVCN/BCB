@@ -12,11 +12,11 @@ type Handler struct {
 	service *Service
 }
 
-func NewHandler(service *Service) *Handler {
+func newHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func (handler *Handler) Login(ctx *gin.Context) {
+func (handler *Handler) login(ctx *gin.Context) {
 	var request struct {
 		Login    string `json:"login" binding:"required"`
 		Password string `json:"password" binding:"required"`
@@ -25,7 +25,7 @@ func (handler *Handler) Login(ctx *gin.Context) {
 		response.Error(ctx, http.StatusBadRequest, "invalid_request", "Informe login e senha.", nil)
 		return
 	}
-	token, user, err := handler.service.Login(ctx, request.Login, request.Password)
+	token, user, err := handler.service.login(ctx, request.Login, request.Password)
 	switch {
 	case errors.Is(err, ErrRateLimited):
 		response.Error(ctx, http.StatusTooManyRequests, "authentication_rate_limited", "Aguarde antes de tentar novamente.", nil)
@@ -41,7 +41,7 @@ func (handler *Handler) Login(ctx *gin.Context) {
 	}
 }
 
-func (handler *Handler) Me(ctx *gin.Context) {
+func (handler *Handler) me(ctx *gin.Context) {
 	claims, _ := ClaimsFromContext(ctx)
 	ctx.JSON(http.StatusOK, gin.H{"user": gin.H{"id": claims.Subject, "role": claims.Role, "clientId": claims.ClientID}})
 }

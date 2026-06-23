@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"unicode"
+
+	"bcb/backend/internal/domain"
 )
 
 func NormalizeDocument(value, documentType string) (string, error) {
@@ -16,11 +18,11 @@ func NormalizeDocument(value, documentType string) (string, error) {
 
 	normalized := digits.String()
 	switch documentType {
-	case "cpf":
+	case string(domain.DocumentCPF):
 		if !validCPF(normalized) {
 			return "", errors.New("invalid CPF")
 		}
-	case "cnpj":
+	case string(domain.DocumentCNPJ):
 		if !validCNPJ(normalized) {
 			return "", errors.New("invalid CNPJ")
 		}

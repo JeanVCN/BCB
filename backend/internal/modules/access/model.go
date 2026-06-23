@@ -1,8 +1,10 @@
 package access
 
+import "bcb/backend/internal/domain"
+
 type User struct {
 	ID              string
-	Role            string
+	Role            domain.Role
 	Login           string
 	PasswordHash    string
 	Enabled         bool

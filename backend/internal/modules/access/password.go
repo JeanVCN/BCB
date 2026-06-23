@@ -69,7 +69,7 @@ func HashPassword(password string) (string, error) {
 	), nil
 }
 
-func VerifyPassword(password, encoded string) bool {
+func verifyPassword(password, encoded string) bool {
 	parts := strings.Split(encoded, "$")
 	if len(parts) != 6 || parts[1] != "argon2id" || parts[2] != "v=19" {
 		return false

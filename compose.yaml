@@ -58,6 +58,20 @@ services:
       retries: 10
     restart: unless-stopped
 
+  message-worker:
+    build:
+      context: ./backend
+    command: ["/app/message-worker"]
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-bcb}:${POSTGRES_PASSWORD:-bcb_dev_password}@postgres:5432/${POSTGRES_DB:-bcb}?sslmode=disable
+      REDIS_ADDR: redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-this-development-secret-32-chars}
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend

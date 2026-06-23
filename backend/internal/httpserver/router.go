@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"bcb/backend/internal/domain"
 	"bcb/backend/internal/httpserver/middlewares"
 	"bcb/backend/internal/modules"
 	"github.com/gin-gonic/gin"
@@ -45,10 +46,10 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	authenticated.Use(middlewares.Authenticate(dependencies.Modules.TokenService()))
 
 	admin := authenticated.Group("/admin")
-	admin.Use(middlewares.RequireRole("admin"))
+	admin.Use(middlewares.RequireRole(domain.RoleAdmin))
 
 	client := authenticated.Group("")
-	client.Use(middlewares.RequireRole("client"))
+	client.Use(middlewares.RequireRole(domain.RoleClient))
 
 	dependencies.Modules.RegisterRoutes(modules.Routes{
 		Public:        api,

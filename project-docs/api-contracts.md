@@ -362,12 +362,12 @@ Erros de negócio relevantes:
 | `insufficient_balance` | 422 | Pré-pago sem saldo |
 | `limit_exceeded` | 422 | Pós-pago sem disponibilidade |
 | `client_not_active` | 403 | Empresa bloqueada |
+| `conversation_not_found` | 404 | Ausente ou pertencente a outra empresa |
+| `idempotency_conflict` | 409 | Mesma chave com outro conteúdo |
 
 O processamento é simulado. Mensagens comuns tendem a sucesso; conteúdo com
 `[fail]` força falha permanente para demonstração, e conteúdo com `[retry]`
 força falhas transitórias até esgotar as tentativas e acionar estorno.
-| `conversation_not_found` | 404 | Ausente ou pertencente a outra empresa |
-| `idempotency_conflict` | 409 | Mesma chave com outro conteúdo |
 
 ### GET `/messages/{messageId}`
 

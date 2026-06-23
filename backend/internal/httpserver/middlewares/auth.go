@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"bcb/backend/internal/domain"
 	"bcb/backend/internal/httpserver/response"
 	"bcb/backend/internal/modules/access"
 	"github.com/gin-gonic/gin"
@@ -29,7 +30,7 @@ func Authenticate(tokens *access.TokenService) gin.HandlerFunc {
 	}
 }
 
-func RequireRole(role string) gin.HandlerFunc {
+func RequireRole(role domain.Role) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		claims, ok := access.ClaimsFromContext(ctx)
 		if !ok || claims.Role != role {

@@ -63,8 +63,13 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Migration automática | `RUN_MIGRATIONS=true` por padrão, configurável | Facilitar avaliação local sem impedir operação controlada por pipeline |
 | Idempotência financeira | Tabela genérica de registros idempotentes para mutações administrativas | Reaproveitar a proteção em crédito e ajuste de limite sem confundir limite com movimentação financeira |
 | Ajuste de limite | Registrar em auditoria, não como transação financeira | Limite não movimenta dinheiro; transações ficam reservadas a crédito, débito, consumo e estorno |
-| Worker inicial | Rodar junto da API, consumindo jobs persistentes no PostgreSQL | Entregar o core com simplicidade e preservar caminho para extrair worker dedicado |
+| Worker de mensagens | Rodar como serviço independente da API, consumindo jobs persistentes no PostgreSQL | Evitar acoplar o processamento de disparos ao ciclo de atualização do serviço HTTP |
 | Simulação de envio | Sucesso por padrão; `[fail]` força falha permanente; `[retry]` força falha transitória até estorno | Permitir demonstrar sucesso, retry e estorno sem custo de provedor externo |
+| Constantes de domínio | Centralizar no backend e espelhar no frontend | Reduzir comparação insegura de strings sem introduzir tabelas auxiliares prematuras |
+| Fronteira financeiro/mensagens | `messages` orquestra o envio; `billing` executa cobrança e estorno usando a mesma transação | Preservar atomicidade sem espalhar regra financeira no domínio de mensagens |
+| Dependência entre domínios | `messages` consome uma interface do service de `billing`, não o repository concreto | Compartilhar regra de negócio pela camada correta e manter persistência encapsulada no domínio financeiro |
+| Organização do repository financeiro | Manter o núcleo transacional em `repository.go` e dividir auxiliares em poucos arquivos temáticos | Melhorar navegação sem deixar o arquivo principal vazio nem transformar o pacote em microarquivos |
+| Enumerações de domínio | Evitar strings soltas em comparações e comandos; usar constantes/tipos compartilhados | Reduzir erro de digitação e deixar regras mais legíveis em backend e frontend |
 
 ## Conclusão sobre envio e recebimento reais
 
@@ -144,12 +149,12 @@ de dinheiro. A conversão de plano permanece como etapa posterior.
 - Após o esgotamento das tentativas, a mensagem passará para `failed` e o
   estorno será executado uma única vez, ligado à transação original.
 
-Na implementação atual, o worker simples roda no mesmo processo da API e
-consome `dispatch_jobs` persistentes no PostgreSQL usando bloqueio transacional.
-Mensagens comuns simulam sucesso. Para demonstração controlada, `[fail]` no
-conteúdo gera falha permanente e `[retry]` gera falhas transitórias até esgotar
-as quatro tentativas totais, quando ocorre a falha definitiva e o estorno
-idempotente.
+Na implementação atual, o worker simples roda como processo/serviço
+independente da API e consome `dispatch_jobs` persistentes no PostgreSQL usando
+bloqueio transacional. Mensagens comuns simulam sucesso. Para demonstração
+controlada, `[fail]` no conteúdo gera falha permanente e `[retry]` gera falhas
+transitórias até esgotar as quatro tentativas totais, quando ocorre a falha
+definitiva e o estorno idempotente.
 
 ## Segurança de acesso
 
@@ -304,3 +309,18 @@ Não há definição funcional bloqueante para iniciar a implementação.
   simples, retry e estorno.
 - Definida a simulação local de disparo por conteúdo: sucesso padrão, `[fail]`
   para falha permanente e `[retry]` para falha transitória até esgotar retries.
+- Separado o worker para o binário `/app/message-worker` e serviço Docker
+  `message-worker`, deixando o ciclo de vida independente da API.
+- Criadas constantes de domínio no backend e no frontend para planos, canais,
+  prioridades, status e tipos financeiros.
+- Movida a cobrança e o estorno de mensagem para o módulo `billing`, mantendo
+  `messages` como orquestrador do caso de uso e preservando a transação única
+  entre financeiro, mensagem e job.
+- Definido que comunicação entre domínios deve ocorrer pela camada de service
+  do domínio chamado, não por acesso direto ao seu repository concreto.
+- Reorganizado o repository de billing para manter cobrança/estorno em
+  `repository.go` e agrupar auxiliares em admin/profile e
+  transaction/idempotency, evitando tanto arquivo principal vazio quanto excesso
+  de microarquivos.
+- Definido que enumerações de domínio devem ser comparadas por constantes/tipos
+  compartilhados, não por strings soltas espalhadas pelo projeto.

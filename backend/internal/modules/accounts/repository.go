@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"bcb/backend/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -35,8 +36,8 @@ func (repository *Repository) Register(ctx context.Context, registration Registr
 	clientID := uuid.NewString()
 	_, err = tx.Exec(ctx, `
 		INSERT INTO client_accounts (id, name, document_type, document, status, requested_plan)
-		VALUES ($1, $2, $3, $4, 'pending', $5)`,
-		clientID, registration.Name, registration.DocumentType, registration.Document, registration.RequestedPlan,
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		clientID, registration.Name, registration.DocumentType, registration.Document, domain.ClientStatusPending, registration.RequestedPlan,
 	)
 	if uniqueViolation(err) {
 		return "", ErrConflict
@@ -97,7 +98,7 @@ func (repository *Repository) Activate(ctx context.Context, actorID, clientID st
 	if err != nil {
 		return fmt.Errorf("lock client: %w", err)
 	}
-	if activation.PlanType != requestedPlan || currentStatus == "active" {
+	if activation.PlanType != requestedPlan || currentStatus == string(domain.ClientStatusActive) {
 		return ErrConflict
 	}
 
@@ -118,12 +119,12 @@ func (repository *Repository) Activate(ctx context.Context, actorID, clientID st
 		return fmt.Errorf("set billing profile: %w", err)
 	}
 
-	_, err = tx.Exec(ctx, `UPDATE client_accounts SET status = 'active', status_reason = NULL, updated_at = NOW() WHERE id = $1`, clientID)
+	_, err = tx.Exec(ctx, `UPDATE client_accounts SET status = $2, status_reason = NULL, updated_at = NOW() WHERE id = $1`, clientID, domain.ClientStatusActive)
 	if err != nil {
 		return fmt.Errorf("activate client: %w", err)
 	}
 
-	if err := insertAudit(ctx, tx, actorID, "client.activated", clientID, "", map[string]any{"status": currentStatus}, map[string]any{"status": "active", "planType": activation.PlanType}); err != nil {
+	if err := insertAudit(ctx, tx, actorID, "client.activated", clientID, "", map[string]any{"status": currentStatus}, map[string]any{"status": domain.ClientStatusActive, "planType": activation.PlanType}); err != nil {
 		return err
 	}
 	return tx.Commit(ctx)
@@ -144,7 +145,7 @@ func (repository *Repository) ChangeStatus(ctx context.Context, actorID, clientI
 	if err != nil {
 		return fmt.Errorf("lock client status: %w", err)
 	}
-	if (targetStatus == "rejected" && previous != "pending") || (targetStatus == "inactive" && previous != "active") {
+	if (targetStatus == string(domain.ClientStatusRejected) && previous != string(domain.ClientStatusPending)) || (targetStatus == string(domain.ClientStatusInactive) && previous != string(domain.ClientStatusActive)) {
 		return ErrConflict
 	}
 	_, err = tx.Exec(ctx, `UPDATE client_accounts SET status = $2, status_reason = $3, updated_at = NOW() WHERE id = $1`, clientID, targetStatus, reason)

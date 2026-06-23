@@ -36,10 +36,24 @@
   histórico, crédito pré-pago, ajuste de limite pós-pago, idempotência e lock
   Redis por empresa.
 - Cobrança por mensagem, estorno e reversão de consumo foram implementados no
-  módulo `messages`, junto com jobs persistentes e worker simples.
-- O worker inicial roda no processo da API e consome `dispatch_jobs` no
-  PostgreSQL com `FOR UPDATE SKIP LOCKED`; ele pode ser extraído depois para
-  processo dedicado/RabbitMQ.
+  módulo `billing` e são chamados pelo módulo `messages` durante o caso de uso
+  de envio.
+- A transação do envio continua única: `messages` coordena conversa, mensagem e
+  job, enquanto `billing` aplica cobrança/estorno recebendo a mesma transação.
+- A integração entre `messages` e `billing` ocorre por uma interface do service
+  financeiro. Assim, o módulo de mensagens não conhece o repository concreto de
+  billing e a regra financeira permanece encapsulada no domínio correto.
+- O repository de billing mantém o núcleo de cobrança/estorno em
+  `repository.go`. Os demais arquivos agrupam responsabilidades auxiliares
+  maiores, como perfil/administração e transações/idempotência/auditoria.
+- Enumerações de domínio são centralizadas no backend em `internal/domain` e
+  espelhadas no frontend em `frontend/src/domain.ts`; comparações diretas com
+  strings soltas devem ser evitadas.
+- O worker de mensagens roda em processo/serviço independente da API e consome
+  `dispatch_jobs` no PostgreSQL com `FOR UPDATE SKIP LOCKED`; ele ainda usa a
+  lógica do módulo `messages`, preservando coesão de domínio.
+- O Docker Compose possui o serviço `message-worker`, que usa o mesmo build do
+  backend e executa `/app/message-worker`.
 - A simulação local usa sucesso padrão, `[fail]` para falha permanente e
   `[retry]` para falhas transitórias até esgotar tentativas e estornar.
 - O frontend cobre onboarding/autenticação/admin básico, fluxo inicial de

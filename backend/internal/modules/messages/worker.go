@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+
+	"bcb/backend/internal/domain"
 )
 
 type Worker struct {
@@ -57,26 +59,26 @@ func (worker *Worker) process(ctx context.Context, job dispatchJob) error {
 
 	outcome, errorCode := simulateDispatch(job)
 	switch outcome {
-	case "sent":
+	case domain.DeliveryAttemptSent:
 		return worker.repository.CompleteJob(ctx, job)
-	case "permanent_failure":
-		return worker.repository.FailJob(ctx, job, "permanent_failure", errorCode)
+	case domain.DeliveryAttemptPermanentFailure:
+		return worker.repository.FailJob(ctx, job, string(domain.DeliveryAttemptPermanentFailure), errorCode)
 	default:
 		if job.AttemptCount < maxAttempts {
 			return worker.repository.RetryJob(ctx, job, time.Now().UTC().Add(retryDelay(job.AttemptCount)), errorCode)
 		}
-		return worker.repository.FailJob(ctx, job, "transient_failure", errorCode)
+		return worker.repository.FailJob(ctx, job, string(domain.DeliveryAttemptTransientFailure), errorCode)
 	}
 }
 
-func simulateDispatch(job dispatchJob) (string, string) {
+func simulateDispatch(job dispatchJob) (domain.DeliveryAttemptOutcome, string) {
 	content := strings.ToLower(job.Content)
 	switch {
 	case strings.Contains(content, "[fail]"):
-		return "permanent_failure", "simulated_permanent_failure"
+		return domain.DeliveryAttemptPermanentFailure, "simulated_permanent_failure"
 	case strings.Contains(content, "[retry]"):
-		return "transient_failure", "simulated_transient_failure"
+		return domain.DeliveryAttemptTransientFailure, "simulated_transient_failure"
 	default:
-		return "sent", ""
+		return domain.DeliveryAttemptSent, ""
 	}
 }

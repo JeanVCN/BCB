@@ -52,7 +52,6 @@ func main() {
 		Config:   cfg,
 		Postgres: pool,
 		Redis:    redisClient,
-		Logger:   logger,
 	})
 
 	server := &http.Server{
@@ -81,8 +80,6 @@ func main() {
 			os.Exit(1)
 		}
 	}()
-
-	registry.RunWorkers(shutdownSignal)
 
 	<-shutdownSignal.Done()
 	logger.Info("shutdown signal received")

@@ -12,11 +12,11 @@ type RateLimiter struct {
 	client *redis.Client
 }
 
-func NewRateLimiter(client *redis.Client) *RateLimiter {
+func newRateLimiter(client *redis.Client) *RateLimiter {
 	return &RateLimiter{client: client}
 }
 
-func (limiter *RateLimiter) Blocked(ctx context.Context, login string) (time.Duration, bool, error) {
+func (limiter *RateLimiter) blocked(ctx context.Context, login string) (time.Duration, bool, error) {
 	duration, err := limiter.client.TTL(ctx, "auth:block:"+login).Result()
 	if err != nil {
 		return 0, false, fmt.Errorf("check login rate limit: %w", err)
@@ -24,7 +24,7 @@ func (limiter *RateLimiter) Blocked(ctx context.Context, login string) (time.Dur
 	return duration, duration > 0, nil
 }
 
-func (limiter *RateLimiter) RegisterFailure(ctx context.Context, login string) error {
+func (limiter *RateLimiter) registerFailure(ctx context.Context, login string) error {
 	key := "auth:failures:" + login
 	count, err := limiter.client.Incr(ctx, key).Result()
 	if err != nil {
@@ -42,6 +42,6 @@ func (limiter *RateLimiter) RegisterFailure(ctx context.Context, login string) e
 	return limiter.client.Set(ctx, "auth:block:"+login, "1", penalty).Err()
 }
 
-func (limiter *RateLimiter) Reset(ctx context.Context, login string) error {
+func (limiter *RateLimiter) reset(ctx context.Context, login string) error {
 	return limiter.client.Del(ctx, "auth:failures:"+login, "auth:block:"+login).Err()
 }

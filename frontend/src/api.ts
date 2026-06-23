@@ -1,5 +1,4 @@
-export type Role = 'admin' | 'client'
-export type Plan = 'prepaid' | 'postpaid'
+import type { Channel, ClientStatus, DocumentType, FinancialTransactionType, MessageStatus, Plan, Priority, Role } from './domain'
 
 export interface Session {
   accessToken: string
@@ -9,9 +8,9 @@ export interface Session {
 export interface Client {
   id: string
   name: string
-  documentType: 'cpf' | 'cnpj'
+  documentType: DocumentType
   documentId: string
-  status: 'pending' | 'active' | 'inactive' | 'rejected'
+  status: ClientStatus
   requestedPlan: Plan
   statusReason?: string
   createdAt: string
@@ -33,10 +32,10 @@ export interface Message {
   id: string
   conversationId: string
   content: string
-  channel: 'sms' | 'whatsapp'
-  priority: 'normal' | 'urgent'
+  channel: Channel
+  priority: Priority
   costCents: number
-  status: 'queued' | 'processing' | 'sent' | 'failed'
+  status: MessageStatus
   failureCode?: string
   createdAt: string
   queuedAt: string
@@ -57,7 +56,7 @@ export interface BillingProfile {
 
 export interface FinancialTransaction {
   id: string
-  type: 'credit' | 'debit' | 'consumption' | 'refund' | 'consumption_reversal'
+  type: FinancialTransactionType
   amountCents: number
   messageId?: string
   reversesTransactionId?: string

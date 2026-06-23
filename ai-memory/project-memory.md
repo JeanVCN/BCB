@@ -89,9 +89,19 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
 - O módulo `accounts` concentra empresa cliente, autocadastro, ativação,
   rejeição, inativação e auditoria desse ciclo.
 - O módulo `billing` concentra consulta financeira, crédito pré-pago, ajuste
-  de limite pós-pago, histórico financeiro, idempotência e lock Redis.
-- O módulo `messages` concentra envio, cobrança, histórico da conversa,
-  dispatch jobs persistentes, tentativas, worker simples, retry e estorno.
+  de limite pós-pago, histórico financeiro, cobrança de mensagem, estorno,
+  idempotência e lock Redis.
+- O módulo `messages` concentra envio, acionamento da cobrança, histórico da
+  conversa, dispatch jobs persistentes, tentativas, worker simples, retry e
+  acionamento do estorno.
+- O worker de mensagens roda como processo/serviço independente da API. A API
+  continua responsável por validar, cobrar, registrar mensagem e criar job; o
+  worker consome `dispatch_jobs` em outro ciclo de vida, reduzindo risco de
+  interromper disparos durante atualização do serviço HTTP.
+- Constantes de domínio como plano, canal, prioridade, status e tipos
+  financeiros devem ficar centralizadas no backend em `internal/domain` e
+  espelhadas no frontend em `src/domain.ts`. Um gerador/schema comum pode ser
+  adotado futuramente se o custo compensar.
 - A persistência dos contextos usa o nome `Repository`, não `Store`, por
   representar a abstração de acesso ao agregado/dados do domínio.
 - A camada `httpserver` contém apenas roteador, middlewares e helpers de
@@ -193,8 +203,8 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
 - A fila simples foi implementada com `dispatch_jobs` persistidos em
   PostgreSQL, usando `FOR UPDATE SKIP LOCKED` para evitar processamento
   simultâneo do mesmo job.
-- O worker roda junto da API nesta fase, com polling curto, mas a fronteira do
-  módulo permite extraí-lo futuramente para processo/serviço dedicado.
+- O worker roda em processo separado, com polling curto, e a lógica permanece
+  no módulo `messages` para manter coesão de domínio.
 - A simulação de disparo considera mensagens normais como sucesso. Conteúdos
   com `[fail]` geram falha permanente e conteúdos com `[retry]` geram falhas
   transitórias até esgotar as tentativas, permitindo demonstrar retry e estorno
@@ -348,6 +358,24 @@ Somente depois do essencial estar estável, avaliar:
 - O frontend de cliente já permite enviar mensagem, escolher SMS/WhatsApp,
   escolher prioridade, acompanhar `queued`, `processing`, `sent` e `failed`, e
   atualizar resumo/histórico financeiro.
+- A API não inicia mais o worker automaticamente. O ambiente Docker possui um
+  serviço `message-worker`, baseado no mesmo build do backend e executando
+  `/app/message-worker`.
+- A regra financeira de cobrança/estorno pertence ao módulo `billing`. O módulo
+  `messages` abre a transação do caso de uso e chama `billing` passando a mesma
+  transação, preservando atomicidade entre cobrança, mensagem e job sem mover
+  regra financeira para o domínio de mensagens.
+- A fronteira entre `messages` e `billing` é o service de billing, exposto por
+  uma interface consumida por `messages`. O módulo de mensagens não instancia
+  nem depende diretamente do repository concreto de billing.
+- O repository de billing mantém o núcleo financeiro transacional em
+  `repository.go`, especialmente cobrança e estorno de mensagens. Arquivos
+  auxiliares agrupam perfil/administração e transações/idempotência/auditoria.
+  A divisão deve evitar tanto arquivos excessivamente longos quanto
+  microarquivos difíceis de navegar.
+- Comparações de enumerações do domínio não devem usar strings soltas. Backend
+  deve centralizar esses valores em `internal/domain`; frontend deve espelhá-los
+  em `src/domain.ts`.
 
 ## Pendências abertas
 
