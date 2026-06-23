@@ -17,6 +17,44 @@ export interface Client {
   createdAt: string
 }
 
+export interface Recipient {
+  id: string
+  name: string
+  phone: string
+}
+
+export interface Conversation {
+  id: string
+  recipient: Recipient
+  lastActivityAt: string | null
+}
+
+export interface Message {
+  id: string
+}
+
+export interface BillingProfile {
+  planType: Plan
+  prepaidBalanceCents: number
+  postpaidTotalLimitCents: number
+  postpaidConsumedCents: number
+  postpaidAvailableCents: number
+  currentPlanAvailableCents: number
+  updatedAt: string
+}
+
+export interface FinancialTransaction {
+  id: string
+  type: 'credit' | 'debit' | 'consumption' | 'refund' | 'consumption_reversal'
+  amountCents: number
+  messageId?: string
+  reversesTransactionId?: string
+  actorUserId?: string
+  idempotencyKey: string
+  reason?: string
+  createdAt: string
+}
+
 interface APIError {
   error?: { message?: string }
 }
@@ -53,5 +91,27 @@ export const api = {
   ),
   reject: (token: string, clientId: string, reason: string) => request<void>(
     `/admin/clients/${clientId}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }, token,
+  ),
+  addCredit: (token: string, clientId: string, body: object, idempotencyKey: string) => request<void>(
+    `/admin/clients/${clientId}/credits`, {
+      method: 'POST', body: JSON.stringify(body), headers: { 'Idempotency-Key': idempotencyKey },
+    }, token,
+  ),
+  setPostpaidLimit: (token: string, clientId: string, body: object, idempotencyKey: string) => request<void>(
+    `/admin/clients/${clientId}/postpaid-limit`, {
+      method: 'PUT', body: JSON.stringify(body), headers: { 'Idempotency-Key': idempotencyKey },
+    }, token,
+  ),
+  adminFinancialTransactions: (token: string, clientId: string) => request<{ items: FinancialTransaction[] }>(
+    `/admin/clients/${clientId}/financial-transactions`, {}, token,
+  ),
+  billing: (token: string) => request<BillingProfile>('/billing', {}, token),
+  billingTransactions: (token: string) => request<{ items: FinancialTransaction[] }>('/billing/transactions', {}, token),
+  conversations: (token: string) => request<{ items: Conversation[] }>('/conversations', {}, token),
+  createConversation: (token: string, body: object) => request<Conversation>('/conversations', {
+    method: 'POST', body: JSON.stringify(body),
+  }, token),
+  messages: (token: string, conversationId: string) => request<{ items: Message[] }>(
+    `/conversations/${conversationId}/messages`, {}, token,
   ),
 }

@@ -20,8 +20,8 @@
 - O backend usa `pgx`/`pgxpool` para PostgreSQL e `go-redis` para Redis.
 - O primeiro administrador é criado por binário dedicado e idempotente,
   configurado por variáveis de ambiente.
-- O backend agrupa contextos em `internal/modules`, inicialmente com `access`
-  e `accounts`.
+- O backend agrupa contextos em `internal/modules`, atualmente com `access`,
+  `accounts`, `conversations` e `billing`.
 - Cada módulo usa `Repository` como abstração de persistência e mantém seu
   service, handler e registro de rotas.
 - `httpserver` mantém o roteador, middlewares e respostas compartilhadas.
@@ -32,10 +32,15 @@
 
 ## Limites desta etapa
 
-- As regras financeiras completas ainda não foram implementadas.
-- Conversas, mensagens, fila, retry e estorno ainda não foram implementados.
-- O frontend cobre onboarding/autenticação/admin básico, mas ainda não possui
-  o fluxo de conversas e envio.
+- O financeiro administrativo básico foi implementado: consulta de resumo,
+  histórico, crédito pré-pago, ajuste de limite pós-pago, idempotência e lock
+  Redis por empresa.
+- Cobrança por mensagem, estorno e reversão de consumo ainda dependem do
+  módulo de mensagens/worker.
+- Mensagens, fila, retry e estorno ainda não foram implementados.
+- O frontend cobre onboarding/autenticação/admin básico, fluxo inicial de
+  conversas e visualização/ações financeiras básicas, mas ainda não possui
+  envio de mensagens.
 
 ## Validação realizada
 

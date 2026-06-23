@@ -8,8 +8,10 @@
 
 - Projeto: Big Chat Brasil (BCB), desafio técnico Fullstack.
 - Última consolidação: 2026-06-23.
-- Estado atual: cadastro, ativação, RBAC e autenticação implementados e
-  validados localmente; próximo incremento é conversas e destinatários.
+- Estado atual: cadastro, ativação, RBAC, autenticação, destinatários,
+  conversas e financeiro administrativo básico implementados localmente;
+  próximo incremento recomendado é envio de mensagens com cobrança, fila,
+  worker, retry e estorno.
 - Fonte inicial: documentos oficiais locais em `docs/` e definições do
   responsável pelo projeto.
 
@@ -86,6 +88,8 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
   rate limit, contexto de claims e bootstrap administrativo.
 - O módulo `accounts` concentra empresa cliente, autocadastro, ativação,
   rejeição, inativação e auditoria desse ciclo.
+- O módulo `billing` concentra consulta financeira, crédito pré-pago, ajuste
+  de limite pós-pago, histórico financeiro, idempotência e lock Redis.
 - A persistência dos contextos usa o nome `Repository`, não `Store`, por
   representar a abstração de acesso ao agregado/dados do domínio.
 - A camada `httpserver` contém apenas roteador, middlewares e helpers de
@@ -148,6 +152,8 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
 - CPF/CNPJ duplicado nunca cria uma segunda conta, inclusive após rejeição.
 - Telefone de destinatário é único dentro de cada empresa; tentar abrir nova
   conversa para o mesmo telefone recupera a conversa existente.
+- Telefones de destinatários são normalizados aceitando separadores visuais,
+  mas devem resultar em E.164 com `+` e 8 a 15 dígitos.
 
 ### Conversas e mensagens
 
@@ -215,6 +221,17 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
 - Redis será usado como coordenação distribuída; a consistência financeira
   também deverá ser garantida pela persistência transacional, sem depender
   exclusivamente do lock.
+- O financeiro administrativo básico foi implementado antes do envio de
+  mensagens: cliente consulta resumo e histórico; administrador adiciona
+  crédito pré-pago e ajusta limite pós-pago.
+- Mutações financeiras administrativas exigem `Idempotency-Key`. A repetição
+  da mesma chave com o mesmo corpo não reaplica o efeito; a mesma chave com
+  corpo diferente retorna conflito.
+- Créditos pré-pagos geram `financial_transactions` do tipo `credit`.
+- Ajustes de limite pós-pago não entram como transação financeira porque não
+  movimentam dinheiro; eles são registrados em `audit_events`.
+- Redis bloqueia mutações financeiras por empresa durante a operação, e o
+  PostgreSQL mantém transação, constraints e idempotência como garantia final.
 
 ### Escopo posterior
 
@@ -286,11 +303,32 @@ Somente depois do essencial estar estável, avaliar:
 - A criação do admin usa somente o módulo `access`; a administração de
   empresas usa `accounts`. A composição dos repositories, services e handlers
   HTTP fica dentro dos próprios módulos e do registry em `internal/modules`.
+- O módulo `conversations` implementa cadastro/listagem de conversas e
+  destinatários.
+- `POST /api/v1/conversations` cria uma conversa para o cliente autenticado e
+  ativo ou retorna a conversa existente quando o telefone já pertence à empresa.
+- `GET /api/v1/conversations` lista somente conversas da empresa autenticada.
+- `GET /api/v1/conversations/{conversationId}/messages` valida propriedade da
+  conversa e retorna histórico vazio até o módulo de mensagens ser implementado.
+- O frontend de cliente já permite criar destinatário, listar conversas,
+  selecionar conversa e visualizar estado vazio de mensagens.
+- O módulo `billing` já expõe resumo financeiro do cliente em
+  `/api/v1/billing` e histórico em `/api/v1/billing/transactions`.
+- O admin já pode adicionar crédito pré-pago por
+  `/api/v1/admin/clients/{clientId}/credits`, com lock Redis e idempotência.
+- O admin já pode ajustar limite pós-pago por
+  `/api/v1/admin/clients/{clientId}/postpaid-limit`, impedindo limite menor
+  que o consumo atual.
+- O admin já consulta histórico financeiro por
+  `/api/v1/admin/clients/{clientId}/financial-transactions`.
+- O frontend já apresenta resumo financeiro para o cliente, histórico
+  financeiro inicial e ações administrativas simples de crédito/limite.
 
 ## Pendências abertas
 
-Não há pendência funcional bloqueante para prosseguir para conversas. Novas
-ambiguidades devem ser registradas antes de alterar os contratos aprovados.
+Não há pendência funcional bloqueante para prosseguir para envio de mensagens,
+fila simples, worker, retry e estorno. Novas ambiguidades devem ser registradas
+antes de alterar os contratos aprovados.
 
 ## Onboarding e RBAC aprovados
 

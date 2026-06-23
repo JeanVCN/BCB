@@ -7,8 +7,10 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 ## Estado do projeto
 
 - Data da consolidação: 2026-06-23.
-- Fase: cadastro, ativação, RBAC e autenticação concluídos localmente.
-- Próxima fase: destinatários e conversas.
+- Fase: destinatários, conversas e financeiro administrativo básico concluídos
+  localmente.
+- Próxima fase recomendada: envio de mensagens com cobrança, fila simples,
+  worker, retry e estorno.
 
 ## Escopo confirmado
 
@@ -25,6 +27,7 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Mensageria externa | Não integrar inicialmente com SMS/WhatsApp reais | O FAQ permite simulação e provedores gerariam custo externo |
 | Status inicial | Processar até `sent` ou `failed` | Corresponde ao ciclo de negócio explicitamente descrito |
 | Conversa | Cadastro básico com nome e telefone do destinatário | Viabilizar o fluxo completo sem depender de dados artificiais |
+| Telefone de destinatário | Normalizar separadores, mas exigir resultado E.164 com `+` e 8 a 15 dígitos | Manter previsibilidade sem aceitar número local ambíguo |
 | Cadastro de empresa | Incluir cadastro inicial | Viabilizar autenticação e demonstração ponta a ponta |
 | Autenticação | CPF/CNPJ mais senha | Documento isolado não oferece segurança mínima |
 | Cliente inativo | Não pode autenticar nem enviar mensagens | Aplicar o bloqueio de forma consistente |
@@ -58,6 +61,8 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Composição da aplicação | `main` abre conexões; `modules` monta dependências internas de cada módulo | Manter lifecycle centralizado sem poluir a entrada da aplicação |
 | Camada HTTP | Roteador, middlewares e respostas compartilhadas em `httpserver` | Manter transporte HTTP comum separado dos handlers de domínio |
 | Migration automática | `RUN_MIGRATIONS=true` por padrão, configurável | Facilitar avaliação local sem impedir operação controlada por pipeline |
+| Idempotência financeira | Tabela genérica de registros idempotentes para mutações administrativas | Reaproveitar a proteção em crédito e ajuste de limite sem confundir limite com movimentação financeira |
+| Ajuste de limite | Registrar em auditoria, não como transação financeira | Limite não movimenta dinheiro; transações ficam reservadas a crédito, débito, consumo e estorno |
 
 ## Conclusão sobre envio e recebimento reais
 
@@ -103,6 +108,12 @@ O escopo inclui:
 - consultar saldo, limite e consumo;
 - consultar histórico de transações;
 - converter planos preservando a rastreabilidade financeira.
+
+Na implementação atual, crédito pré-pago e ajuste de limite pós-pago já estão
+disponíveis para administradores e exigem `Idempotency-Key`. Créditos geram
+registros imutáveis em `financial_transactions`; ajustes de limite são
+auditados em `audit_events`, porque não representam entrada, saída ou reversão
+de dinheiro. A conversão de plano permanece como etapa posterior.
 
 ### Mudança de plano
 
@@ -265,3 +276,17 @@ Não há definição funcional bloqueante para iniciar a implementação.
   monta as dependências internas recebendo conexões já abertas pela `main`.
 - Tornada a execução automática de migrations configurável por
   `RUN_MIGRATIONS`.
+- Implementado o módulo `conversations`, com migrations de destinatários e
+  conversas.
+- Implementados cadastro/listagem de conversas, unicidade de telefone por
+  empresa e retorno da conversa existente para telefone duplicado.
+- Implementado endpoint de histórico de mensagens da conversa retornando lista
+  vazia até o módulo de mensagens existir.
+- Implementada interface inicial do cliente para criar destinatário, listar e
+  selecionar conversas.
+- Implementado o módulo `billing`, com resumo financeiro do cliente, histórico
+  de transações, crédito pré-pago, ajuste de limite pós-pago, idempotência e
+  lock Redis por empresa.
+- Definido que ajuste de limite pós-pago é auditoria administrativa e não uma
+  transação financeira, preservando `financial_transactions` para movimentos
+  de dinheiro, consumo e estorno.

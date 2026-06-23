@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { api } from './api'
-import type { Client, Plan, Session } from './api'
+import type { BillingProfile, Client, Conversation, FinancialTransaction, Message, Plan, Session } from './api'
 import './App.css'
 
 type View = 'login' | 'register' | 'pending'
@@ -57,7 +57,7 @@ function App() {
     return <AdminDashboard session={session} onLogout={() => saveSession(null)} />
   }
   if (session?.user.role === 'client') {
-    return <ClientHome onLogout={() => saveSession(null)} />
+    return <ClientHome session={session} onLogout={() => saveSession(null)} />
   }
 
   return (
@@ -114,8 +114,158 @@ function Submit({ loading, label }: { loading: boolean; label: string }) {
   return <button className="primary" disabled={loading}>{loading ? 'Processando…' : label}</button>
 }
 
-function ClientHome({ onLogout }: { onLogout: () => void }) {
-  return <main className="dashboard"><header><div><span className="eyebrow">BCB</span><h1>Conta ativa</h1></div><button onClick={onLogout}>Sair</button></header><section className="empty-state"><h2>Próximo passo: conversas</h2><p>Seu acesso está funcionando. O financeiro e o chat chegam nos próximos incrementos.</p></section></main>
+function ClientHome({ session, onLogout }: { session: Session; onLogout: () => void }) {
+  const token = session.accessToken
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [selected, setSelected] = useState<Conversation | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [billing, setBilling] = useState<BillingProfile | null>(null)
+  const [transactions, setTransactions] = useState<FinancialTransaction[]>([])
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [loadingConversations, setLoadingConversations] = useState(true)
+
+  async function refresh() {
+    try {
+      const response = await api.conversations(token)
+      setConversations(response.items)
+      setError('')
+      if (selected && !response.items.some(conversation => conversation.id === selected.id)) setSelected(null)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Erro inesperado.')
+    }
+  }
+
+  useEffect(() => {
+    void api.conversations(token)
+      .then(response => { setConversations(response.items); setError('') })
+      .catch(reason => setError(reason instanceof Error ? reason.message : 'Erro inesperado.'))
+      .finally(() => setLoadingConversations(false))
+    void api.billing(token)
+      .then(response => setBilling(response))
+      .catch(reason => setError(reason instanceof Error ? reason.message : 'Erro inesperado.'))
+    void api.billingTransactions(token)
+      .then(response => setTransactions(response.items))
+      .catch(reason => setError(reason instanceof Error ? reason.message : 'Erro inesperado.'))
+  }, [token])
+
+  async function createConversation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = event.currentTarget
+    const data = new FormData(form)
+    setLoading(true)
+    setError('')
+    try {
+      const conversation = await api.createConversation(token, {
+        recipient: { name: data.get('name'), phone: data.get('phone') },
+      })
+      form.reset()
+      await refresh()
+      await openConversation(conversation)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Erro inesperado.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function openConversation(conversation: Conversation) {
+    setSelected(conversation)
+    setMessages([])
+    setError('')
+    try {
+      const response = await api.messages(token, conversation.id)
+      setMessages(response.items)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Erro inesperado.')
+    }
+  }
+
+  return (
+    <main className="dashboard">
+      <header>
+        <div><span className="eyebrow">BCB</span><h1>Conversas</h1></div>
+        <button onClick={onLogout}>Sair</button>
+      </header>
+      {error && <p className="error">{error}</p>}
+      {billing && (
+        <section className="summary-grid">
+          <article className="metric-card">
+            <span>Plano atual</span>
+            <strong>{billing.planType === 'prepaid' ? 'Pré-pago' : 'Pós-pago'}</strong>
+          </article>
+          <article className="metric-card">
+            <span>Disponível</span>
+            <strong>{formatMoney(billing.currentPlanAvailableCents)}</strong>
+          </article>
+          <article className="metric-card">
+            <span>{billing.planType === 'prepaid' ? 'Saldo' : 'Consumo / limite'}</span>
+            <strong>
+              {billing.planType === 'prepaid'
+                ? formatMoney(billing.prepaidBalanceCents)
+                : `${formatMoney(billing.postpaidConsumedCents)} / ${formatMoney(billing.postpaidTotalLimitCents)}`}
+            </strong>
+          </article>
+        </section>
+      )}
+      <section className="conversation-layout">
+        <aside className="conversation-sidebar">
+          <form onSubmit={createConversation} className="compact-form">
+            <h2>Novo destinatário</h2>
+            <label>Nome<input name="name" required /></label>
+            <label>Telefone E.164<input name="phone" placeholder="+5511999999999" required /></label>
+            <Submit loading={loading} label="Criar conversa" />
+          </form>
+          <div className="conversation-list">
+            {loadingConversations ? (
+              <div className="empty-state"><h2>Carregando conversas</h2><p>Buscando o estado salvo no backend…</p></div>
+            ) : conversations.length === 0 ? (
+              <div className="empty-state"><h2>Nenhuma conversa</h2><p>Cadastre um destinatário para iniciar o fluxo.</p></div>
+            ) : conversations.map(conversation => (
+              <button
+                key={conversation.id}
+                className={`conversation-item ${selected?.id === conversation.id ? 'active' : ''}`}
+                onClick={() => void openConversation(conversation)}
+              >
+                <strong>{conversation.recipient.name}</strong>
+                <span>{conversation.recipient.phone}</span>
+                <small>{conversation.lastActivityAt ? new Date(conversation.lastActivityAt).toLocaleString('pt-BR') : 'Sem atividade recente'}</small>
+              </button>
+            ))}
+          </div>
+        </aside>
+        <section className="conversation-panel">
+          {!selected ? (
+            <div className="empty-state"><h2>Selecione uma conversa</h2><p>O histórico aparecerá aqui.</p></div>
+          ) : (
+            <>
+              <div className="conversation-heading">
+                <h2>{selected.recipient.name}</h2>
+                <p>{selected.recipient.phone}</p>
+              </div>
+              {messages.length === 0 ? (
+                <div className="empty-state"><h2>Sem mensagens ainda</h2><p>O envio entra na próxima etapa.</p></div>
+              ) : (
+                <div>{messages.map(message => <p key={message.id}>{message.id}</p>)}</div>
+              )}
+            </>
+          )}
+        </section>
+      </section>
+      <section className="history-panel">
+        <h2>Histórico financeiro</h2>
+        {transactions.length === 0 ? (
+          <p className="muted">Nenhuma movimentação financeira registrada ainda.</p>
+        ) : transactions.slice(0, 5).map(transaction => (
+          <div key={transaction.id} className="history-row">
+            <span>{transactionLabel(transaction.type)}</span>
+            <strong>{formatMoney(transaction.amountCents)}</strong>
+            <small>{new Date(transaction.createdAt).toLocaleString('pt-BR')}</small>
+          </div>
+        ))}
+      </section>
+    </main>
+  )
 }
 
 function AdminDashboard({ session, onLogout }: { session: Session; onLogout: () => void }) {
@@ -148,7 +298,65 @@ function AdminDashboard({ session, onLogout }: { session: Session; onLogout: () 
     try { await api.reject(token, client.id, reason); await refresh() } catch (failure) { setError(failure instanceof Error ? failure.message : 'Erro inesperado.') }
   }
 
-  return <main className="dashboard"><header><div><span className="eyebrow">Administração</span><h1>Clientes</h1></div><button onClick={onLogout}>Sair</button></header>{error && <p className="error">{error}</p>}<section className="client-list">{clients.length === 0 ? <div className="empty-state"><h2>Nenhum cadastro</h2><p>Novas solicitações aparecerão aqui.</p></div> : clients.map(client => <article key={client.id} className="client-card"><div><span className={`pill ${client.status}`}>{client.status}</span><h2>{client.name}</h2><p>{client.documentType.toUpperCase()} · {client.documentId}</p><small>Plano solicitado: {client.requestedPlan === 'prepaid' ? 'Pré-pago' : 'Pós-pago'}</small></div>{client.status !== 'active' && <div className="actions"><button className="primary" onClick={() => void activate(client)}>Ativar</button>{client.status === 'pending' && <button onClick={() => void reject(client)}>Rejeitar</button>}</div>}</article>)}</section></main>
+  async function addCredit(client: Client) {
+    const amount = Number(prompt('Valor do crédito em centavos', '1000'))
+    if (!Number.isSafeInteger(amount) || amount <= 0) return
+    const reason = prompt('Motivo da recarga')?.trim() ?? ''
+    try {
+      await api.addCredit(token, client.id, { amountCents: amount, reason }, idempotencyKey())
+      await refresh()
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Erro inesperado.')
+    }
+  }
+
+  async function setPostpaidLimit(client: Client) {
+    const amount = Number(prompt('Novo limite total em centavos', '5000'))
+    if (!Number.isSafeInteger(amount) || amount <= 0) return
+    const reason = prompt('Motivo do ajuste')?.trim() ?? ''
+    try {
+      await api.setPostpaidLimit(token, client.id, { totalLimitCents: amount, reason }, idempotencyKey())
+      await refresh()
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Erro inesperado.')
+    }
+  }
+
+  async function showTransactions(client: Client) {
+    try {
+      const response = await api.adminFinancialTransactions(token, client.id)
+      const summary = response.items.length === 0
+        ? 'Nenhuma movimentação financeira registrada.'
+        : response.items
+          .slice(0, 10)
+          .map(item => `${transactionLabel(item.type)} · ${formatMoney(item.amountCents)} · ${new Date(item.createdAt).toLocaleString('pt-BR')}`)
+          .join('\n')
+      alert(summary)
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Erro inesperado.')
+    }
+  }
+
+  return <main className="dashboard"><header><div><span className="eyebrow">Administração</span><h1>Clientes</h1></div><button onClick={onLogout}>Sair</button></header>{error && <p className="error">{error}</p>}<section className="client-list">{clients.length === 0 ? <div className="empty-state"><h2>Nenhum cadastro</h2><p>Novas solicitações aparecerão aqui.</p></div> : clients.map(client => <article key={client.id} className="client-card"><div><span className={`pill ${client.status}`}>{client.status}</span><h2>{client.name}</h2><p>{client.documentType.toUpperCase()} · {client.documentId}</p><small>Plano solicitado: {client.requestedPlan === 'prepaid' ? 'Pré-pago' : 'Pós-pago'}</small></div><div className="actions">{client.status !== 'active' ? <><button className="primary" onClick={() => void activate(client)}>Ativar</button>{client.status === 'pending' && <button onClick={() => void reject(client)}>Rejeitar</button>}</> : <><button className="primary" onClick={() => client.requestedPlan === 'prepaid' ? void addCredit(client) : void setPostpaidLimit(client)}>{client.requestedPlan === 'prepaid' ? 'Adicionar crédito' : 'Ajustar limite'}</button><button onClick={() => void showTransactions(client)}>Histórico</button></>}</div></article>)}</section></main>
+}
+
+function formatMoney(cents: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100)
+}
+
+function transactionLabel(type: FinancialTransaction['type']) {
+  const labels: Record<FinancialTransaction['type'], string> = {
+    credit: 'Crédito',
+    debit: 'Débito',
+    consumption: 'Consumo',
+    refund: 'Estorno',
+    consumption_reversal: 'Reversão de consumo',
+  }
+  return labels[type]
+}
+
+function idempotencyKey() {
+  return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
 export default App

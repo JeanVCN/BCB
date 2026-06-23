@@ -35,22 +35,23 @@ não define endpoints, banco de dados ou estrutura de código.
 - [x] Credenciais inválidas retornam uma resposta que não revela qual campo
   estava incorreto.
 - [x] Tentativas de autenticação são limitadas progressivamente.
-- [ ] Um cliente acessa somente seus próprios dados, conversas e mensagens.
+- [x] Um cliente acessa somente suas conversas e mensagens.
+- [x] Um cliente acessa somente seus próprios dados financeiros.
 - [x] Um usuário `client` não executa operações exclusivas de `admin`.
 - [x] Uma sessão inválida ou expirada não acessa recursos protegidos.
 
 ## 4. Planos e administração financeira
 
-- [ ] Uma empresa possui exatamente um plano vigente: pré-pago ou pós-pago.
-- [ ] Administrador consegue adicionar crédito ao pré-pago.
-- [ ] Administrador consegue alterar o limite total do pós-pago sem apagar seu
+- [x] Uma empresa possui exatamente um plano vigente: pré-pago ou pós-pago.
+- [x] Administrador consegue adicionar crédito ao pré-pago.
+- [x] Administrador consegue alterar o limite total do pós-pago sem apagar seu
   consumo acumulado.
-- [ ] Saldo, limite total, consumo e disponibilidade são apresentados de forma
+- [x] Saldo, limite total, consumo e disponibilidade são apresentados de forma
   coerente com o plano.
-- [ ] Toda alteração financeira cria histórico rastreável.
-- [ ] Operações financeiras concorrentes não produzem saldo negativo, consumo
+- [x] Toda alteração financeira cria histórico rastreável.
+- [x] Operações financeiras concorrentes não produzem saldo negativo, consumo
   perdido ou cobrança duplicada.
-- [ ] Indisponibilidade do lock distribuído não permite prosseguir de forma
+- [x] Indisponibilidade do lock distribuído não permite prosseguir de forma
   insegura com uma mutação financeira.
 
 ## 5. Solicitação de mudança de plano
@@ -68,12 +69,12 @@ não define endpoints, banco de dados ou estrutura de código.
 
 ## 6. Conversas
 
-- [ ] Uma empresa ativa consegue cadastrar conversa com nome e telefone do
+- [x] Uma empresa ativa consegue cadastrar conversa com nome e telefone do
   cliente final.
-- [ ] A empresa visualiza somente suas conversas.
-- [ ] A lista apresenta destinatário e resumo da atividade mais recente.
-- [ ] Selecionar uma conversa carrega seu histórico.
-- [ ] Estados vazio, carregando e erro possuem apresentação apropriada.
+- [x] A empresa visualiza somente suas conversas.
+- [x] A lista apresenta destinatário e resumo da atividade mais recente.
+- [x] Selecionar uma conversa carrega seu histórico.
+- [x] Estados vazio, carregando e erro possuem apresentação apropriada.
 
 ## 7. Envio e financeiro da mensagem
 
@@ -121,10 +122,10 @@ não define endpoints, banco de dados ou estrutura de código.
 
 ## 10. Auditoria e segurança operacional
 
-- [ ] Operações administrativas e financeiras relevantes possuem auditoria.
+- [x] Operações administrativas e financeiras relevantes possuem auditoria.
 - [ ] Logs não expõem senha, token ou outros segredos.
 - [ ] Erros internos não devolvem detalhes sensíveis ao frontend.
-- [ ] Datas e valores financeiros mantêm representação consistente entre as
+- [x] Datas e valores financeiros mantêm representação consistente entre as
   camadas.
 
 ## Fora do primeiro escopo

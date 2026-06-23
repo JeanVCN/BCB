@@ -47,10 +47,14 @@ func NewRouter(dependencies Dependencies) http.Handler {
 	admin := authenticated.Group("/admin")
 	admin.Use(middlewares.RequireRole("admin"))
 
+	client := authenticated.Group("")
+	client.Use(middlewares.RequireRole("client"))
+
 	dependencies.Modules.RegisterRoutes(modules.Routes{
 		Public:        api,
 		Authenticated: authenticated,
 		Admin:         admin,
+		Client:        client,
 	})
 
 	return router

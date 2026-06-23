@@ -4,7 +4,7 @@
 
 ### Comunicação empresarial com controle financeiro e processamento confiável
 
-![Status](https://img.shields.io/badge/status-auth%20e%20RBAC-16a34a)
+![Status](https://img.shields.io/badge/status-financeiro%20b%C3%A1sico-16a34a)
 ![Backend](https://img.shields.io/badge/backend-Go%20%2B%20Gin-00ADD8)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
 ![Database](https://img.shields.io/badge/database-PostgreSQL-4169E1)
@@ -23,8 +23,8 @@ não apenas o funcionamento do produto, mas também decisões conscientes sobre
 consistência, concorrência, integração e evolução arquitetural.
 
 > **Estado atual:** ambiente executável com frontend, API, PostgreSQL e Redis,
-> autocadastro, autenticação, ativação administrativa, RBAC inicial e readiness
-> real das dependências.
+> autocadastro, autenticação, ativação administrativa, RBAC inicial, conversas
+> financeiro administrativo básico e readiness real das dependências.
 
 ## Experiência planejada
 
@@ -45,10 +45,10 @@ enfileiramento, processamento e atualização de status.
 
 | Camada | Tecnologia | Estado atual |
 |---|---|---|
-| Backend | Go 1.25+ e Gin 1.12 | Auth, RBAC, migrations, liveness e readiness |
-| Frontend | React 19.2, TypeScript 6 e Vite 8 | Onboarding, login e painel admin básico |
+| Backend | Go 1.25+ e Gin 1.12 | Auth, RBAC, conversas, financeiro, migrations e health checks |
+| Frontend | React 19.2, TypeScript 6 e Vite 8 | Onboarding, login, admin básico, conversas e financeiro |
 | Persistência | PostgreSQL 17 | Integrado ao backend via migrations |
-| Coordenação | Redis 8 | Integrado ao backend para rate limit |
+| Coordenação | Redis 8 | Rate limit de login e lock financeiro |
 | Ambiente | Docker Compose | Serviços integrados e validados |
 | Evolução opcional | RabbitMQ | Ainda fora do escopo implementado |
 
@@ -81,8 +81,8 @@ enfileiramento, processamento e atualização de status.
 - [x] Modelo conceitual e contratos HTTP v1.
 - [x] Ambiente Docker com PostgreSQL e Redis.
 - [x] Cadastro, ativação, RBAC e autenticação.
-- [ ] Planos e administração financeira.
-- [ ] Conversas e histórico.
+- [x] Conversas e histórico inicial.
+- [x] Planos e administração financeira básica.
 - [ ] Envio, fila, worker, retry e estorno.
 - [ ] Frontend responsivo e fluxo integrado.
 - [ ] Testes, documentação final e preparação da entrega.
