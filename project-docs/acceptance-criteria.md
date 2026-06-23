@@ -17,7 +17,7 @@ não define endpoints, banco de dados ou estrutura de código.
 
 - [x] Uma empresa consegue se cadastrar como PF/CPF ou PJ/CNPJ.
 - [x] CPF/CNPJ duplicado não cria uma segunda conta.
-- [x] A senha aceita entre 15 e 128 caracteres e não é truncada.
+- [x] A senha aceita entre 9 e 128 caracteres e não é truncada.
 - [x] A senha exige letras, números e caractere especial, conforme decisão do
   projeto.
 - [x] Senhas conhecidas como comuns ou comprometidas são rejeitadas.

@@ -1,4 +1,4 @@
-package identity
+package access
 
 import (
 	"crypto/rand"
@@ -27,8 +27,8 @@ var commonPasswords = map[string]struct{}{
 
 func ValidatePassword(password string) error {
 	length := len([]rune(password))
-	if length < 15 || length > 128 {
-		return errors.New("must contain between 15 and 128 characters")
+	if length < 9 || length > 128 {
+		return errors.New("must contain between 9 and 128 characters")
 	}
 
 	var hasLetter, hasNumber, hasSpecial bool

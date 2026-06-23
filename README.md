@@ -113,6 +113,10 @@ docker compose run --rm backend /app/admin-bootstrap
 O comando é idempotente: se o login administrativo já existir, ele não cria uma
 segunda identidade.
 
+Por padrão, a API aplica migrations na inicialização para simplificar a
+avaliação local. Se quiser controlar migrations separadamente, defina
+`RUN_MIGRATIONS=false`.
+
 As portas podem ser alteradas no arquivo `.env` caso já estejam ocupadas. Para
 encerrar o ambiente:
 

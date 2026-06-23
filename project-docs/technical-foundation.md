@@ -15,9 +15,18 @@
 - `/health/ready` verifica PostgreSQL e Redis.
 - Migrations SQL são embutidas no backend e aplicadas pela API e pelo comando
   de bootstrap administrativo.
+- A aplicação automática de migrations é controlada por `RUN_MIGRATIONS`; o
+  padrão do ambiente local/Docker é `true`.
 - O backend usa `pgx`/`pgxpool` para PostgreSQL e `go-redis` para Redis.
 - O primeiro administrador é criado por binário dedicado e idempotente,
   configurado por variáveis de ambiente.
+- O backend agrupa contextos em `internal/modules`, inicialmente com `access`
+  e `accounts`.
+- Cada módulo usa `Repository` como abstração de persistência e mantém seu
+  service, handler e registro de rotas.
+- `httpserver` mantém o roteador, middlewares e respostas compartilhadas.
+- O registry de `modules` monta as dependências internas usando as conexões
+  abertas pela `main`.
 - Frontend estático servido por Nginx, que também será o proxy da API no
   ambiente Docker.
 

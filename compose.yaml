@@ -41,6 +41,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-bcb}:${POSTGRES_PASSWORD:-bcb_dev_password}@postgres:5432/${POSTGRES_DB:-bcb}?sslmode=disable
       REDIS_ADDR: redis:6379
       JWT_SECRET: ${JWT_SECRET:-change-this-development-secret-32-chars}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
       ADMIN_LOGIN: ${ADMIN_LOGIN:-admin}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeThisAdminPassword123!}
     ports:

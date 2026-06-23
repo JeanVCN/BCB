@@ -4,15 +4,17 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 )
 
 const defaultHTTPPort = "8080"
 
 type Config struct {
-	HTTPPort    string
-	DatabaseURL string
-	RedisAddr   string
-	JWTSecret   string
+	HTTPPort      string
+	DatabaseURL   string
+	RedisAddr     string
+	JWTSecret     string
+	RunMigrations bool
 }
 
 func Load() (Config, error) {
@@ -40,11 +42,21 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("JWT_SECRET must contain at least 32 characters")
 	}
 
+	runMigrations := true
+	if value := os.Getenv("RUN_MIGRATIONS"); value != "" {
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			return Config{}, fmt.Errorf("RUN_MIGRATIONS must be a boolean")
+		}
+		runMigrations = parsed
+	}
+
 	return Config{
-		HTTPPort:    port,
-		DatabaseURL: databaseURL,
-		RedisAddr:   redisAddr,
-		JWTSecret:   jwtSecret,
+		HTTPPort:      port,
+		DatabaseURL:   databaseURL,
+		RedisAddr:     redisAddr,
+		JWTSecret:     jwtSecret,
+		RunMigrations: runMigrations,
 	}, nil
 }
 

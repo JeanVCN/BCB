@@ -25,6 +25,21 @@ func TestLoadRejectsInvalidPort(t *testing.T) {
 	}
 }
 
+func TestLoadAllowsDisablingAutomaticMigrations(t *testing.T) {
+	t.Setenv("HTTP_PORT", "")
+	setRequiredEnvironment(t)
+	t.Setenv("RUN_MIGRATIONS", "false")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.RunMigrations {
+		t.Fatal("RunMigrations = true, want false")
+	}
+}
+
 func setRequiredEnvironment(t *testing.T) {
 	t.Helper()
 	t.Setenv("DATABASE_URL", "postgres://example")

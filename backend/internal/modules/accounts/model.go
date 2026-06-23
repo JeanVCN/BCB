@@ -1,16 +1,6 @@
-package identity
+package accounts
 
 import "time"
-
-type User struct {
-	ID              string
-	Role            string
-	Login           string
-	PasswordHash    string
-	Enabled         bool
-	ClientAccountID *string
-	ClientStatus    *string
-}
 
 type Client struct {
 	ID            string    `json:"id"`

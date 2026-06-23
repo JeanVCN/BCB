@@ -76,6 +76,28 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
   temporário depois de três falhas.
 - O ambiente Docker completo foi integrado ao backend: API, frontend,
   PostgreSQL e Redis se comunicam pelo Compose.
+- A API pode aplicar migrations automaticamente na inicialização quando
+  `RUN_MIGRATIONS=true`, padrão do ambiente de desafio. Em ambientes onde a
+  migração for controlada por pipeline ou comando operacional separado, esse
+  comportamento pode ser desligado.
+- O backend é organizado em `internal/modules`. Cada módulo agrupa seu próprio
+  repository, service, handler e registro de rotas.
+- O módulo `access` concentra autenticação, usuários, sessão, senha, token,
+  rate limit, contexto de claims e bootstrap administrativo.
+- O módulo `accounts` concentra empresa cliente, autocadastro, ativação,
+  rejeição, inativação e auditoria desse ciclo.
+- A persistência dos contextos usa o nome `Repository`, não `Store`, por
+  representar a abstração de acesso ao agregado/dados do domínio.
+- A camada `httpserver` contém apenas roteador, middlewares e helpers de
+  resposta compartilhados.
+- Cada módulo expõe seu próprio `RegisterRoutes`, permitindo que futuros
+  módulos, como conversas, mensagens e financeiro, adicionem rotas sem criar
+  handlers híbridos nem duplicar domínios em `httpserver/handlers`.
+- O pacote `modules` agrega os módulos e monta suas dependências internas a
+  partir das conexões já abertas pela `main`.
+- A `main` não deve montar manualmente todos os repositories/services e também
+  não deve delegar abertura de PostgreSQL/Redis aos módulos. Ela permanece
+  responsável por configuração, conexões e ciclo de vida do processo.
 
 ### Documentação
 
@@ -93,8 +115,10 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
 - A empresa será identificada por CPF ou CNPJ, mas o documento sozinho não
   autentica o acesso.
 - O acesso exigirá senha.
-- A senha terá entre 15 e 128 caracteres e não poderá ser truncada
-  silenciosamente.
+- A senha terá entre 9 e 128 caracteres e não poderá ser truncada
+  silenciosamente. O mínimo foi reduzido de 15 para 9 caracteres em
+  2026-06-23 por se tratar de um projeto de desafio técnico, mantendo a regra
+  de ser maior que oito caracteres.
 - Por decisão do projeto, a senha deverá combinar letras, números e caractere
   especial. Essa composição é mais restritiva que as recomendações atuais de
   NIST/OWASP, que priorizam comprimento e bloqueio de senhas comprometidas; o
@@ -259,6 +283,9 @@ Somente depois do essencial estar estável, avaliar:
 - O painel administrativo básico permite listar clientes, ativar e rejeitar.
 - O primeiro admin é criado por `admin-bootstrap`, comando idempotente que lê
   credenciais de variáveis de ambiente.
+- A criação do admin usa somente o módulo `access`; a administração de
+  empresas usa `accounts`. A composição dos repositories, services e handlers
+  HTTP fica dentro dos próprios módulos e do registry em `internal/modules`.
 
 ## Pendências abertas
 

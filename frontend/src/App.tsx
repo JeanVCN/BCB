@@ -98,7 +98,7 @@ function App() {
                   <label>Número<input name="documentId" inputMode="numeric" required /></label>
                 </div>
                 <label>Plano desejado<select name="requestedPlan"><option value="prepaid">Pré-pago</option><option value="postpaid">Pós-pago</option></select></label>
-                <label>Senha<input name="password" type="password" minLength={15} maxLength={128} required autoComplete="new-password" /><small>15+ caracteres, com letras, números e caractere especial.</small></label>
+                <label>Senha<input name="password" type="password" minLength={9} maxLength={128} required autoComplete="new-password" /><small>9+ caracteres, com letras, números e caractere especial.</small></label>
                 <Submit loading={loading} label="Solicitar cadastro" />
               </form>
             )}

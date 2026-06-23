@@ -4,7 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"bcb/backend/internal/identity"
+	"bcb/backend/internal/httpserver/middlewares"
+	"bcb/backend/internal/modules"
 	"github.com/gin-gonic/gin"
 )
 
@@ -13,8 +14,7 @@ type ReadinessChecker interface {
 }
 
 type Dependencies struct {
-	Identity  *IdentityHandler
-	Tokens    *identity.TokenService
+	Modules   *modules.Registry
 	Readiness ReadinessChecker
 }
 
@@ -35,24 +35,23 @@ func NewRouter(dependencies Dependencies) http.Handler {
 		ctx.JSON(http.StatusOK, gin.H{"status": "ready"})
 	})
 
-	if dependencies.Identity == nil || dependencies.Tokens == nil {
+	if dependencies.Modules == nil {
 		return router
 	}
 
 	api := router.Group("/api/v1")
-	api.POST("/auth/register", dependencies.Identity.Register)
-	api.POST("/auth/login", dependencies.Identity.Login)
 
 	authenticated := api.Group("")
-	authenticated.Use(authenticate(dependencies.Tokens))
-	authenticated.GET("/me", dependencies.Identity.Me)
+	authenticated.Use(middlewares.Authenticate(dependencies.Modules.TokenService()))
 
 	admin := authenticated.Group("/admin")
-	admin.Use(requireRole("admin"))
-	admin.GET("/clients", dependencies.Identity.ListClients)
-	admin.POST("/clients/:clientId/activate", dependencies.Identity.Activate)
-	admin.POST("/clients/:clientId/reject", dependencies.Identity.Reject)
-	admin.POST("/clients/:clientId/deactivate", dependencies.Identity.Deactivate)
+	admin.Use(middlewares.RequireRole("admin"))
+
+	dependencies.Modules.RegisterRoutes(modules.Routes{
+		Public:        api,
+		Authenticated: authenticated,
+		Admin:         admin,
+	})
 
 	return router
 }

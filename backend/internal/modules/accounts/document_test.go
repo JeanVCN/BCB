@@ -1,4 +1,4 @@
-package identity
+package accounts
 
 import "testing"
 

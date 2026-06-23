@@ -1,4 +1,4 @@
-package identity
+package accounts
 
 import (
 	"context"
@@ -17,16 +17,16 @@ var (
 	ErrNotFound = errors.New("resource not found")
 )
 
-type Store struct {
+type Repository struct {
 	pool *pgxpool.Pool
 }
 
-func NewStore(pool *pgxpool.Pool) *Store {
-	return &Store{pool: pool}
+func NewRepository(pool *pgxpool.Pool) *Repository {
+	return &Repository{pool: pool}
 }
 
-func (store *Store) Register(ctx context.Context, registration Registration) (string, error) {
-	tx, err := store.pool.Begin(ctx)
+func (repository *Repository) Register(ctx context.Context, registration Registration) (string, error) {
+	tx, err := repository.pool.Begin(ctx)
 	if err != nil {
 		return "", fmt.Errorf("begin registration: %w", err)
 	}
@@ -60,37 +60,8 @@ func (store *Store) Register(ctx context.Context, registration Registration) (st
 	return clientID, nil
 }
 
-func (store *Store) BootstrapAdmin(ctx context.Context, login, passwordHash string) error {
-	_, err := store.pool.Exec(ctx, `
-		INSERT INTO users (id, role, login, password_hash, enabled)
-		VALUES ($1, 'admin', $2, $3, TRUE)
-		ON CONFLICT (login) DO NOTHING`, uuid.NewString(), login, passwordHash)
-	if err != nil {
-		return fmt.Errorf("bootstrap admin: %w", err)
-	}
-	return nil
-}
-
-func (store *Store) UserByLogin(ctx context.Context, login string) (User, error) {
-	var user User
-	err := store.pool.QueryRow(ctx, `
-		SELECT u.id, u.role, u.login, u.password_hash, u.enabled,
-		       u.client_account_id, c.status
-		FROM users u
-		LEFT JOIN client_accounts c ON c.id = u.client_account_id
-		WHERE u.login = $1`, login,
-	).Scan(&user.ID, &user.Role, &user.Login, &user.PasswordHash, &user.Enabled, &user.ClientAccountID, &user.ClientStatus)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return User{}, ErrNotFound
-	}
-	if err != nil {
-		return User{}, fmt.Errorf("find user: %w", err)
-	}
-	return user, nil
-}
-
-func (store *Store) Clients(ctx context.Context, status string) ([]Client, error) {
-	rows, err := store.pool.Query(ctx, `
+func (repository *Repository) Clients(ctx context.Context, status string) ([]Client, error) {
+	rows, err := repository.pool.Query(ctx, `
 		SELECT id, name, document_type, document, status, requested_plan, status_reason, created_at
 		FROM client_accounts
 		WHERE ($1 = '' OR status = $1)
@@ -111,8 +82,8 @@ func (store *Store) Clients(ctx context.Context, status string) ([]Client, error
 	return clients, rows.Err()
 }
 
-func (store *Store) Activate(ctx context.Context, actorID, clientID string, activation Activation) error {
-	tx, err := store.pool.Begin(ctx)
+func (repository *Repository) Activate(ctx context.Context, actorID, clientID string, activation Activation) error {
+	tx, err := repository.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin activation: %w", err)
 	}
@@ -158,8 +129,8 @@ func (store *Store) Activate(ctx context.Context, actorID, clientID string, acti
 	return tx.Commit(ctx)
 }
 
-func (store *Store) ChangeStatus(ctx context.Context, actorID, clientID, targetStatus, reason string) error {
-	tx, err := store.pool.Begin(ctx)
+func (repository *Repository) ChangeStatus(ctx context.Context, actorID, clientID, targetStatus, reason string) error {
+	tx, err := repository.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}

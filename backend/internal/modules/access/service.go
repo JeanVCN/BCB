@@ -1,9 +1,8 @@
-package identity
+package access
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 )
 
@@ -14,38 +13,13 @@ var (
 )
 
 type Service struct {
-	store   *Store
-	tokens  *TokenService
-	limiter *RateLimiter
+	repository *Repository
+	tokens     *TokenService
+	limiter    *RateLimiter
 }
 
-func NewService(store *Store, tokens *TokenService, limiter *RateLimiter) *Service {
-	return &Service{store: store, tokens: tokens, limiter: limiter}
-}
-
-func (service *Service) Register(ctx context.Context, name, documentType, document, password, plan string) (string, error) {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return "", errors.New("name is required")
-	}
-	if plan != "prepaid" && plan != "postpaid" {
-		return "", errors.New("requestedPlan must be prepaid or postpaid")
-	}
-	normalizedDocument, err := NormalizeDocument(document, documentType)
-	if err != nil {
-		return "", err
-	}
-	if err := ValidatePassword(password); err != nil {
-		return "", fmt.Errorf("password: %w", err)
-	}
-	hash, err := HashPassword(password)
-	if err != nil {
-		return "", err
-	}
-	return service.store.Register(ctx, Registration{
-		Name: name, DocumentType: documentType, Document: normalizedDocument,
-		PasswordHash: hash, RequestedPlan: plan,
-	})
+func NewService(repository *Repository, tokens *TokenService, limiter *RateLimiter) *Service {
+	return &Service{repository: repository, tokens: tokens, limiter: limiter}
 }
 
 func (service *Service) Login(ctx context.Context, login, password string) (string, User, error) {
@@ -56,7 +30,7 @@ func (service *Service) Login(ctx context.Context, login, password string) (stri
 		return "", User{}, ErrRateLimited
 	}
 
-	user, err := service.store.UserByLogin(ctx, normalizedLogin)
+	user, err := service.repository.UserByLogin(ctx, normalizedLogin)
 	if err != nil || !VerifyPassword(password, user.PasswordHash) {
 		_ = service.limiter.RegisterFailure(ctx, normalizedLogin)
 		return "", User{}, ErrInvalidCredentials

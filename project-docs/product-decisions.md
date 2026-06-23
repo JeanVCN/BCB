@@ -53,6 +53,11 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Token de sessão | JWT HS256 com segredo mínimo de 32 caracteres | Stateless simples para o desafio, sem refresh inicial |
 | Hash de senha | Argon2id com salt aleatório | Resistência adequada para senhas sem armazenar segredo em claro |
 | Rate limit de login | Redis, três falhas antes de bloqueio temporário | Demonstra proteção básica sem persistir senha ou revelar motivo |
+| Módulos backend | `internal/modules`, com cada módulo agrupando repository, service, handler e rotas | Manter coesão por domínio e evitar duplicação em camadas paralelas |
+| Persistência interna | Usar `Repository` em vez de `Store` | Comunicar melhor a abstração de acesso aos dados/agregados do domínio |
+| Composição da aplicação | `main` abre conexões; `modules` monta dependências internas de cada módulo | Manter lifecycle centralizado sem poluir a entrada da aplicação |
+| Camada HTTP | Roteador, middlewares e respostas compartilhadas em `httpserver` | Manter transporte HTTP comum separado dos handlers de domínio |
+| Migration automática | `RUN_MIGRATIONS=true` por padrão, configurável | Facilitar avaliação local sem impedir operação controlada por pipeline |
 
 ## Conclusão sobre envio e recebimento reais
 
@@ -129,10 +134,13 @@ O escopo inclui:
 ## Segurança de acesso
 
 O cadastro da empresa deve solicitar CPF ou CNPJ e senha. A senha deverá ter de
-15 a 128 caracteres, sem truncamento silencioso, e nunca ser armazenada em texto
-puro. O projeto manterá a exigência previamente definida de letras, números e
-caractere especial, embora as recomendações atuais privilegiem comprimento e
-bloqueio de senhas comprometidas em vez de composição obrigatória.
+9 a 128 caracteres, sem truncamento silencioso, e nunca ser armazenada em texto
+puro. O mínimo foi reduzido de 15 para 9 caracteres em 2026-06-23 por decisão
+do responsável do projeto, considerando o contexto de desafio técnico e a
+intenção de manter a senha apenas acima de oito caracteres. O projeto mantém a
+exigência previamente definida de letras, números e caractere especial, embora
+as recomendações atuais privilegiem comprimento e bloqueio de senhas
+comprometidas em vez de composição obrigatória.
 
 Também serão necessários hash resistente com salt, bloqueio de senhas comuns ou
 comprometidas e limitação progressiva das tentativas de autenticação.
@@ -213,8 +221,8 @@ Não há definição funcional bloqueante para iniciar a implementação.
 - Incluídos cadastro inicial, senha, novas conversas e administração financeira.
 - Incluídos Redis, retry e estorno no escopo.
 - Excluída a integração inicial com provedores reais.
-- Definida senha entre 15 e 128 caracteres e preservada a composição exigida
-  pelo projeto.
+- Definida senha com limite máximo de 128 caracteres, sem truncamento
+  silencioso, e preservada a composição exigida pelo projeto.
 - Definidos três retries com backoff exponencial, jitter e estorno posterior.
 - Confirmados SMS/WhatsApp selecionáveis e evolução para `delivered`/`read`.
 - Excluídas mensagens inbound da primeira versão.
@@ -244,3 +252,16 @@ Não há definição funcional bloqueante para iniciar a implementação.
   clientes, com auditoria.
 - Implementada interface inicial para cadastro, login, painel administrativo e
   estado de espera de aprovação.
+- Reduzido o mínimo de senha de 15 para 9 caracteres por se tratar de um
+  desafio técnico, mantendo exigência de letras, números e caractere especial.
+- Reorganizado o backend em `internal/modules`, inicialmente com `access` e
+  `accounts`, separando autenticação/usuários do ciclo da empresa cliente.
+- Renomeada a abstração de persistência de `Store` para `Repository`.
+- Definido que cada módulo agrupa seu repository, service, handler e
+  `RegisterRoutes`.
+- Definido que `httpserver` mantém apenas roteador, middlewares e respostas
+  compartilhadas.
+- Removida a composição intermediária em `internal/app`; o registry de módulos
+  monta as dependências internas recebendo conexões já abertas pela `main`.
+- Tornada a execução automática de migrations configurável por
+  `RUN_MIGRATIONS`.
