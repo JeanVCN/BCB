@@ -11,7 +11,10 @@ import (
 	"time"
 
 	"bcb/backend/internal/config"
+	"bcb/backend/internal/database"
 	"bcb/backend/internal/httpserver"
+	"bcb/backend/internal/identity"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -23,9 +26,37 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := database.Migrate(cfg.DatabaseURL); err != nil {
+		logger.Error("database migration failed", "error", err)
+		os.Exit(1)
+	}
+
+	pool, err := database.Open(context.Background(), cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("database connection failed", "error", err)
+		os.Exit(1)
+	}
+	defer pool.Close()
+
+	redisClient := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr})
+	defer redisClient.Close()
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		logger.Error("redis connection failed", "error", err)
+		os.Exit(1)
+	}
+
+	store := identity.NewStore(pool)
+	tokens := identity.NewTokenService(cfg.JWTSecret)
+	service := identity.NewService(store, tokens, identity.NewRateLimiter(redisClient))
+	handler := httpserver.NewIdentityHandler(service, store)
+
 	server := &http.Server{
-		Addr:              ":" + cfg.HTTPPort,
-		Handler:           httpserver.NewRouter(),
+		Addr: ":" + cfg.HTTPPort,
+		Handler: httpserver.NewRouter(httpserver.Dependencies{
+			Identity:  handler,
+			Tokens:    tokens,
+			Readiness: database.Readiness{Postgres: pool, Redis: redisClient},
+		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,

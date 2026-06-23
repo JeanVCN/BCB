@@ -13,6 +13,7 @@ frontend/src/assets/hero.png
 # Backend
 backend/bin/
 backend/coverage.out
+.gocache/
 
 # Editors and operating systems
 .DS_Store

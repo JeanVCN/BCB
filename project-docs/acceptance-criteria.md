@@ -6,37 +6,38 @@ não define endpoints, banco de dados ou estrutura de código.
 ## 1. Ambiente e entrega
 
 - [x] Todo o ambiente necessário pode ser iniciado com Docker.
-- [ ] Backend, frontend, PostgreSQL e Redis conseguem se comunicar no ambiente
+- [x] Backend, frontend, PostgreSQL e Redis conseguem se comunicar no ambiente
   documentado.
-- [ ] Uma instalação limpa possui um caminho documentado para criar o primeiro
+- [x] Uma instalação limpa possui um caminho documentado para criar o primeiro
   administrador.
 - [ ] Dados persistidos no PostgreSQL sobrevivem ao reinício dos serviços.
 - [ ] A aplicação apresenta erros de configuração sem expor segredos.
 
 ## 2. Cadastro e ativação
 
-- [ ] Uma empresa consegue se cadastrar como PF/CPF ou PJ/CNPJ.
-- [ ] CPF/CNPJ duplicado não cria uma segunda conta.
-- [ ] A senha aceita entre 15 e 128 caracteres e não é truncada.
-- [ ] A senha exige letras, números e caractere especial, conforme decisão do
+- [x] Uma empresa consegue se cadastrar como PF/CPF ou PJ/CNPJ.
+- [x] CPF/CNPJ duplicado não cria uma segunda conta.
+- [x] A senha aceita entre 15 e 128 caracteres e não é truncada.
+- [x] A senha exige letras, números e caractere especial, conforme decisão do
   projeto.
-- [ ] Senhas conhecidas como comuns ou comprometidas são rejeitadas.
-- [ ] A senha nunca é persistida ou registrada em texto puro.
-- [ ] Uma empresa recém-cadastrada permanece inativa.
-- [ ] Uma empresa inativa não consegue autenticar nem enviar mensagens.
-- [ ] Um administrador consegue consultar cadastros aguardando ativação.
-- [ ] Somente um administrador consegue ativar ou inativar uma empresa.
-- [ ] Ativação e inativação registram ator, instante e mudança realizada.
+- [x] Senhas conhecidas como comuns ou comprometidas são rejeitadas.
+- [x] A senha nunca é persistida ou registrada em texto puro.
+- [x] Uma empresa recém-cadastrada permanece inativa.
+- [x] Uma empresa inativa não consegue autenticar.
+- [ ] Uma empresa inativa não consegue enviar mensagens.
+- [x] Um administrador consegue consultar cadastros aguardando ativação.
+- [x] Somente um administrador consegue ativar ou inativar uma empresa.
+- [x] Ativação e inativação registram ator, instante e mudança realizada.
 
 ## 3. Autenticação e autorização
 
-- [ ] Uma empresa ativa autentica com documento e senha corretos.
-- [ ] Credenciais inválidas retornam uma resposta que não revela qual campo
+- [x] Uma empresa ativa autentica com documento e senha corretos.
+- [x] Credenciais inválidas retornam uma resposta que não revela qual campo
   estava incorreto.
-- [ ] Tentativas de autenticação são limitadas progressivamente.
+- [x] Tentativas de autenticação são limitadas progressivamente.
 - [ ] Um cliente acessa somente seus próprios dados, conversas e mensagens.
-- [ ] Um usuário `client` não executa operações exclusivas de `admin`.
-- [ ] Uma sessão inválida ou expirada não acessa recursos protegidos.
+- [x] Um usuário `client` não executa operações exclusivas de `admin`.
+- [x] Uma sessão inválida ou expirada não acessa recursos protegidos.
 
 ## 4. Planos e administração financeira
 

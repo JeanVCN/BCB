@@ -4,7 +4,7 @@
 
 ### Comunicação empresarial com controle financeiro e processamento confiável
 
-![Status](https://img.shields.io/badge/status-funda%C3%A7%C3%A3o%20execut%C3%A1vel-16a34a)
+![Status](https://img.shields.io/badge/status-auth%20e%20RBAC-16a34a)
 ![Backend](https://img.shields.io/badge/backend-Go%20%2B%20Gin-00ADD8)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
 ![Database](https://img.shields.io/badge/database-PostgreSQL-4169E1)
@@ -22,9 +22,9 @@ Este repositório faz parte de um desafio técnico e foi planejado para demonstr
 não apenas o funcionamento do produto, mas também decisões conscientes sobre
 consistência, concorrência, integração e evolução arquitetural.
 
-> **Estado atual:** fundação executável com frontend, API, PostgreSQL e Redis
-> orquestrados por Docker Compose. As funcionalidades de negócio ainda serão
-> implementadas.
+> **Estado atual:** ambiente executável com frontend, API, PostgreSQL e Redis,
+> autocadastro, autenticação, ativação administrativa, RBAC inicial e readiness
+> real das dependências.
 
 ## Experiência planejada
 
@@ -45,11 +45,11 @@ enfileiramento, processamento e atualização de status.
 
 | Camada | Tecnologia | Estado atual |
 |---|---|---|
-| Backend | Go 1.25+ e Gin 1.12 | API base e liveness implementados |
-| Frontend | React 19.2, TypeScript 6 e Vite 8 | Build responsivo inicial implementado |
-| Persistência | PostgreSQL 17 | Container configurado; integração pendente |
-| Coordenação | Redis 8 | Container configurado; integração pendente |
-| Ambiente | Docker Compose | Quatro serviços construídos e validados |
+| Backend | Go 1.25+ e Gin 1.12 | Auth, RBAC, migrations, liveness e readiness |
+| Frontend | React 19.2, TypeScript 6 e Vite 8 | Onboarding, login e painel admin básico |
+| Persistência | PostgreSQL 17 | Integrado ao backend via migrations |
+| Coordenação | Redis 8 | Integrado ao backend para rate limit |
+| Ambiente | Docker Compose | Serviços integrados e validados |
 | Evolução opcional | RabbitMQ | Ainda fora do escopo implementado |
 
 ## Decisões que orientam a solução
@@ -80,7 +80,7 @@ enfileiramento, processamento e atualização de status.
 - [x] Critérios de aceite.
 - [x] Modelo conceitual e contratos HTTP v1.
 - [x] Ambiente Docker com PostgreSQL e Redis.
-- [ ] Cadastro, ativação, RBAC e autenticação.
+- [x] Cadastro, ativação, RBAC e autenticação.
 - [ ] Planos e administração financeira.
 - [ ] Conversas e histórico.
 - [ ] Envio, fila, worker, retry e estorno.
@@ -101,6 +101,17 @@ Após os health checks:
 - Frontend: `http://localhost:3000`
 - Backend: `http://localhost:8080`
 - Liveness: `http://localhost:8080/health/live`
+- Readiness: `http://localhost:8080/health/ready`
+
+Para criar o primeiro administrador, ajuste `ADMIN_LOGIN` e `ADMIN_PASSWORD` no
+`.env` e execute:
+
+```bash
+docker compose run --rm backend /app/admin-bootstrap
+```
+
+O comando é idempotente: se o login administrativo já existir, ele não cria uma
+segunda identidade.
 
 As portas podem ser alteradas no arquivo `.env` caso já estejam ocupadas. Para
 encerrar o ambiente:

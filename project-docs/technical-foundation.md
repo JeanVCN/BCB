@@ -11,17 +11,22 @@
 - Docker Compose como caminho principal de execução completa.
 - Servidor HTTP com timeouts, logs estruturados e shutdown gracioso desde o
   primeiro incremento.
-- `/health/live` verifica apenas que o processo HTTP está vivo. Readiness de
-  PostgreSQL e Redis será adicionada quando as conexões forem implementadas.
+- `/health/live` verifica apenas que o processo HTTP está vivo.
+- `/health/ready` verifica PostgreSQL e Redis.
+- Migrations SQL são embutidas no backend e aplicadas pela API e pelo comando
+  de bootstrap administrativo.
+- O backend usa `pgx`/`pgxpool` para PostgreSQL e `go-redis` para Redis.
+- O primeiro administrador é criado por binário dedicado e idempotente,
+  configurado por variáveis de ambiente.
 - Frontend estático servido por Nginx, que também será o proxy da API no
   ambiente Docker.
 
 ## Limites desta etapa
 
-- PostgreSQL e Redis sobem e passam por health check, mas ainda não são
-  consumidos pelo backend.
-- Não há migration, entidade de domínio, autenticação ou regra financeira.
-- A tela inicial apenas confirma que o frontend foi construído e servido.
+- As regras financeiras completas ainda não foram implementadas.
+- Conversas, mensagens, fila, retry e estorno ainda não foram implementados.
+- O frontend cobre onboarding/autenticação/admin básico, mas ainda não possui
+  o fluxo de conversas e envio.
 
 ## Validação realizada
 
@@ -30,5 +35,6 @@
 - Validação estrutural do Docker Compose.
 - Build das imagens de backend e frontend.
 - Inicialização dos quatro serviços com health checks saudáveis.
-- Acesso direto e via proxy ao endpoint `/health/live`.
+- Acesso direto aos endpoints `/health/live` e `/health/ready`.
+- Acesso a `/health/ready` pelo proxy do frontend.
 - Entrega do HTML de produção pelo Nginx.

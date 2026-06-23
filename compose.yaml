@@ -40,6 +40,9 @@ services:
       GIN_MODE: release
       DATABASE_URL: postgres://${POSTGRES_USER:-bcb}:${POSTGRES_PASSWORD:-bcb_dev_password}@postgres:5432/${POSTGRES_DB:-bcb}?sslmode=disable
       REDIS_ADDR: redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-this-development-secret-32-chars}
+      ADMIN_LOGIN: ${ADMIN_LOGIN:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeThisAdminPassword123!}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:
@@ -48,7 +51,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8080/health/live"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:8080/health/ready"]
       interval: 5s
       timeout: 5s
       retries: 10

@@ -7,9 +7,9 @@
 ## Metadados
 
 - Projeto: Big Chat Brasil (BCB), desafio técnico Fullstack.
-- Última consolidação: 2026-06-22.
-- Estado atual: fundação técnica implementada e validada; próximo incremento
-  é cadastro, ativação, RBAC e autenticação.
+- Última consolidação: 2026-06-23.
+- Estado atual: cadastro, ativação, RBAC e autenticação implementados e
+  validados localmente; próximo incremento é conversas e destinatários.
 - Fonte inicial: documentos oficiais locais em `docs/` e definições do
   responsável pelo projeto.
 
@@ -62,10 +62,20 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
 - A fundação usa Go 1.25+, Gin 1.12, React 19.2, TypeScript 6, Vite 8,
   PostgreSQL 17 e Redis 8.
 - O servidor HTTP possui timeouts, logs estruturados e shutdown gracioso.
-- `/health/live` representa apenas liveness; readiness será implementada quando
-  o backend passar a abrir conexões com PostgreSQL e Redis.
-- O ambiente Docker completo foi construído e validado com os quatro serviços
-  saudáveis. PostgreSQL e Redis ainda não são consumidos pelo backend.
+- `/health/live` representa liveness do processo HTTP.
+- `/health/ready` verifica conectividade com PostgreSQL e Redis.
+- Migrations SQL ficam embutidas no binário do backend e são aplicadas na
+  inicialização da API e no comando de bootstrap administrativo.
+- O acesso ao PostgreSQL usa `pgx`/`pgxpool`; o acesso ao Redis usa
+  `go-redis`.
+- Tokens de sessão usam JWT assinado com HS256 e segredo obrigatório de pelo
+  menos 32 caracteres.
+- Senhas são armazenadas com Argon2id, salt aleatório e parâmetros fixos no
+  código para o escopo inicial.
+- A limitação de tentativas de login usa Redis com janela de falhas e bloqueio
+  temporário depois de três falhas.
+- O ambiente Docker completo foi integrado ao backend: API, frontend,
+  PostgreSQL e Redis se comunicam pelo Compose.
 
 ### Documentação
 
@@ -232,9 +242,27 @@ Somente depois do essencial estar estável, avaliar:
 - Nunca apresentar no README uma tecnologia planejada como implementada nem
   publicar instruções de execução que ainda não foram validadas.
 
+## Implementação atual
+
+- A API possui autocadastro público em `/api/v1/auth/register`.
+- Login público em `/api/v1/auth/login` emite token de uma hora para admin ou
+  cliente ativo.
+- Cliente pendente, inativo ou rejeitado não autentica.
+- Rotas protegidas exigem `Authorization: Bearer <token>`.
+- `/api/v1/me` retorna a identidade autenticada.
+- Admin lista clientes e pode ativar, rejeitar ou inativar.
+- Ativação cria/atualiza o perfil financeiro inicial conforme o plano
+  solicitado no cadastro.
+- Ativação, rejeição e inativação registram auditoria administrativa.
+- O frontend já apresenta telas de login, cadastro, espera de aprovação,
+  painel administrativo básico e área inicial do cliente.
+- O painel administrativo básico permite listar clientes, ativar e rejeitar.
+- O primeiro admin é criado por `admin-bootstrap`, comando idempotente que lê
+  credenciais de variáveis de ambiente.
+
 ## Pendências abertas
 
-Não há pendência funcional bloqueante para iniciar a implementação. Novas
+Não há pendência funcional bloqueante para prosseguir para conversas. Novas
 ambiguidades devem ser registradas antes de alterar os contratos aprovados.
 
 ## Onboarding e RBAC aprovados

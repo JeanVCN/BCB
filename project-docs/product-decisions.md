@@ -6,9 +6,9 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 
 ## Estado do projeto
 
-- Data da consolidação: 2026-06-22.
-- Fase: fundação técnica concluída.
-- Desenvolvimento da aplicação: iniciado; regras de negócio ainda pendentes.
+- Data da consolidação: 2026-06-23.
+- Fase: cadastro, ativação, RBAC e autenticação concluídos localmente.
+- Próxima fase: destinatários e conversas.
 
 ## Escopo confirmado
 
@@ -46,7 +46,13 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | README evolutivo | Atualizar em cada commit relevante e distinguir planejado de entregue | Manter a apresentação confiável durante toda a construção |
 | Organização inicial | Monorepo com backend, frontend e infraestrutura na raiz | Facilitar integração e execução do desafio |
 | Runtime HTTP | Timeouts, logs estruturados e shutdown gracioso | Partir de um servidor previsível e operável |
-| Health check inicial | Liveness do processo; readiness quando as dependências forem conectadas | Evitar declarar integrações inexistentes como saudáveis |
+| Health checks | Liveness do processo e readiness de PostgreSQL/Redis | Separar processo vivo de dependências essenciais disponíveis |
+| Migrations | SQL embutido no backend e aplicado pela API/bootstrap | Simplificar execução Docker e instalação limpa |
+| Acesso PostgreSQL | `pgx`/`pgxpool` | Driver idiomático, explícito e sem ORM prematuro |
+| Acesso Redis | `go-redis` | Cliente mantido e suficiente para rate limit e locks futuros |
+| Token de sessão | JWT HS256 com segredo mínimo de 32 caracteres | Stateless simples para o desafio, sem refresh inicial |
+| Hash de senha | Argon2id com salt aleatório | Resistência adequada para senhas sem armazenar segredo em claro |
+| Rate limit de login | Redis, três falhas antes de bloqueio temporário | Demonstra proteção básica sem persistir senha ou revelar motivo |
 
 ## Conclusão sobre envio e recebimento reais
 
@@ -131,8 +137,12 @@ bloqueio de senhas comprometidas em vez de composição obrigatória.
 Também serão necessários hash resistente com salt, bloqueio de senhas comuns ou
 comprometidas e limitação progressiva das tentativas de autenticação.
 
-Detalhes de sessão, recuperação de senha, expiração e proteções contra abuso
-serão definidos conforme o escopo de segurança for fechado.
+Na implementação inicial, o hash resistente é Argon2id, o bloqueio de senhas
+comuns usa uma lista local mínima e a limitação de tentativas usa Redis. Essa
+lista local não substitui uma base real de senhas vazadas, mas atende ao escopo
+do desafio sem adicionar dependência externa.
+
+Recuperação de senha fica fora do escopo inicial.
 
 ## Entregas posteriores ao essencial
 
@@ -220,3 +230,17 @@ Não há definição funcional bloqueante para iniciar a implementação.
   estado efetivamente verificável do projeto.
 - Implementada e validada a fundação em monorepo com Go/Gin,
   React/TypeScript, PostgreSQL, Redis e Docker Compose.
+
+### 2026-06-23
+
+- Implementadas migrations iniciais para contas, usuários, perfis financeiros
+  e auditoria.
+- Integrados PostgreSQL e Redis ao backend, com readiness real em
+  `/health/ready`.
+- Implementado bootstrap administrativo idempotente por comando.
+- Implementados autocadastro, login, JWT, Argon2id, validação de CPF/CNPJ,
+  restrição de cliente inativo e rate limit de login em Redis.
+- Implementadas rotas administrativas para listar, ativar, rejeitar e inativar
+  clientes, com auditoria.
+- Implementada interface inicial para cadastro, login, painel administrativo e
+  estado de espera de aprovação.
