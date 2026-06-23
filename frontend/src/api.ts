@@ -31,6 +31,18 @@ export interface Conversation {
 
 export interface Message {
   id: string
+  conversationId: string
+  content: string
+  channel: 'sms' | 'whatsapp'
+  priority: 'normal' | 'urgent'
+  costCents: number
+  status: 'queued' | 'processing' | 'sent' | 'failed'
+  failureCode?: string
+  createdAt: string
+  queuedAt: string
+  processingAt?: string
+  sentAt?: string
+  failedAt?: string
 }
 
 export interface BillingProfile {
@@ -113,5 +125,10 @@ export const api = {
   }, token),
   messages: (token: string, conversationId: string) => request<{ items: Message[] }>(
     `/conversations/${conversationId}/messages`, {}, token,
+  ),
+  sendMessage: (token: string, conversationId: string, body: object, idempotencyKey: string) => request<Message & { billing: BillingProfile }>(
+    `/conversations/${conversationId}/messages`, {
+      method: 'POST', body: JSON.stringify(body), headers: { 'Idempotency-Key': idempotencyKey },
+    }, token,
   ),
 }

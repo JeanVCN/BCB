@@ -21,7 +21,7 @@
 - O primeiro administrador é criado por binário dedicado e idempotente,
   configurado por variáveis de ambiente.
 - O backend agrupa contextos em `internal/modules`, atualmente com `access`,
-  `accounts`, `conversations` e `billing`.
+  `accounts`, `conversations`, `billing` e `messages`.
 - Cada módulo usa `Repository` como abstração de persistência e mantém seu
   service, handler e registro de rotas.
 - `httpserver` mantém o roteador, middlewares e respostas compartilhadas.
@@ -35,12 +35,16 @@
 - O financeiro administrativo básico foi implementado: consulta de resumo,
   histórico, crédito pré-pago, ajuste de limite pós-pago, idempotência e lock
   Redis por empresa.
-- Cobrança por mensagem, estorno e reversão de consumo ainda dependem do
-  módulo de mensagens/worker.
-- Mensagens, fila, retry e estorno ainda não foram implementados.
+- Cobrança por mensagem, estorno e reversão de consumo foram implementados no
+  módulo `messages`, junto com jobs persistentes e worker simples.
+- O worker inicial roda no processo da API e consome `dispatch_jobs` no
+  PostgreSQL com `FOR UPDATE SKIP LOCKED`; ele pode ser extraído depois para
+  processo dedicado/RabbitMQ.
+- A simulação local usa sucesso padrão, `[fail]` para falha permanente e
+  `[retry]` para falhas transitórias até esgotar tentativas e estornar.
 - O frontend cobre onboarding/autenticação/admin básico, fluxo inicial de
-  conversas e visualização/ações financeiras básicas, mas ainda não possui
-  envio de mensagens.
+  conversas, visualização/ações financeiras básicas e envio/acompanhamento de
+  mensagens.
 
 ## Validação realizada
 

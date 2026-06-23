@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { api } from './api'
 import type { BillingProfile, Client, Conversation, FinancialTransaction, Message, Plan, Session } from './api'
@@ -125,6 +125,26 @@ function ClientHome({ session, onLogout }: { session: Session; onLogout: () => v
   const [loading, setLoading] = useState(false)
   const [loadingConversations, setLoadingConversations] = useState(true)
 
+  const refreshBilling = useCallback(async () => {
+    const [billingResponse, transactionResponse] = await Promise.all([
+      api.billing(token),
+      api.billingTransactions(token),
+    ])
+    setBilling(billingResponse)
+    setTransactions(transactionResponse.items)
+  }, [token])
+
+  const loadMessages = useCallback(async (conversation: Conversation, silent = false) => {
+    if (!silent) setMessages([])
+    if (!silent) setError('')
+    try {
+      const response = await api.messages(token, conversation.id)
+      setMessages(response.items)
+    } catch (reason) {
+      if (!silent) setError(reason instanceof Error ? reason.message : 'Erro inesperado.')
+    }
+  }, [token])
+
   async function refresh() {
     try {
       const response = await api.conversations(token)
@@ -141,13 +161,22 @@ function ClientHome({ session, onLogout }: { session: Session; onLogout: () => v
       .then(response => { setConversations(response.items); setError('') })
       .catch(reason => setError(reason instanceof Error ? reason.message : 'Erro inesperado.'))
       .finally(() => setLoadingConversations(false))
-    void api.billing(token)
-      .then(response => setBilling(response))
-      .catch(reason => setError(reason instanceof Error ? reason.message : 'Erro inesperado.'))
-    void api.billingTransactions(token)
-      .then(response => setTransactions(response.items))
+    void Promise.all([api.billing(token), api.billingTransactions(token)])
+      .then(([billingResponse, transactionResponse]) => {
+        setBilling(billingResponse)
+        setTransactions(transactionResponse.items)
+      })
       .catch(reason => setError(reason instanceof Error ? reason.message : 'Erro inesperado.'))
   }, [token])
+
+  useEffect(() => {
+    if (!selected) return undefined
+    const interval = window.setInterval(() => {
+      void loadMessages(selected, true)
+      void refreshBilling().catch(() => undefined)
+    }, 2000)
+    return () => window.clearInterval(interval)
+  }, [loadMessages, refreshBilling, selected])
 
   async function createConversation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -171,13 +200,31 @@ function ClientHome({ session, onLogout }: { session: Session; onLogout: () => v
 
   async function openConversation(conversation: Conversation) {
     setSelected(conversation)
-    setMessages([])
+    await loadMessages(conversation)
+  }
+
+  async function sendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!selected) return
+    const form = event.currentTarget
+    const data = new FormData(form)
+    setLoading(true)
     setError('')
     try {
-      const response = await api.messages(token, conversation.id)
-      setMessages(response.items)
+      const response = await api.sendMessage(token, selected.id, {
+        content: data.get('content'),
+        channel: data.get('channel'),
+        priority: data.get('priority'),
+      }, idempotencyKey())
+      setBilling(response.billing)
+      form.reset()
+      await loadMessages(selected)
+      await refresh()
+      await refreshBilling()
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Erro inesperado.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -246,8 +293,25 @@ function ClientHome({ session, onLogout }: { session: Session; onLogout: () => v
               {messages.length === 0 ? (
                 <div className="empty-state"><h2>Sem mensagens ainda</h2><p>O envio entra na próxima etapa.</p></div>
               ) : (
-                <div>{messages.map(message => <p key={message.id}>{message.id}</p>)}</div>
+                <div className="message-list">{messages.map(message => (
+                  <article key={message.id} className={`message-card ${message.status}`}>
+                    <p>{message.content}</p>
+                    <footer>
+                      <span>{message.channel.toUpperCase()} · {message.priority === 'urgent' ? 'Urgente' : 'Normal'} · {formatMoney(message.costCents)}</span>
+                      <strong>{messageStatusLabel(message.status)}</strong>
+                    </footer>
+                    {message.failureCode && <small>Falha: {message.failureCode}</small>}
+                  </article>
+                ))}</div>
               )}
+              <form onSubmit={sendMessage} className="message-form">
+                <label>Mensagem<textarea name="content" required rows={3} placeholder="Digite a mensagem. Use [fail] ou [retry] para simular falhas." /></label>
+                <div className="field-row">
+                  <label>Canal<select name="channel" defaultValue="whatsapp"><option value="whatsapp">WhatsApp</option><option value="sms">SMS</option></select></label>
+                  <label>Prioridade<select name="priority" defaultValue="normal"><option value="normal">Normal · R$ 0,25</option><option value="urgent">Urgente · R$ 0,50</option></select></label>
+                </div>
+                <Submit loading={loading} label="Enviar mensagem" />
+              </form>
             </>
           )}
         </section>
@@ -353,6 +417,16 @@ function transactionLabel(type: FinancialTransaction['type']) {
     consumption_reversal: 'Reversão de consumo',
   }
   return labels[type]
+}
+
+function messageStatusLabel(status: Message['status']) {
+  const labels: Record<Message['status'], string> = {
+    queued: 'Na fila',
+    processing: 'Processando',
+    sent: 'Enviada',
+    failed: 'Falhou',
+  }
+  return labels[status]
 }
 
 function idempotencyKey() {

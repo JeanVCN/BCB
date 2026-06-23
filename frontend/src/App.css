@@ -1,5 +1,5 @@
 #root { min-height: 100%; }
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 
 .shell { display: grid; min-height: 100vh; grid-template-columns: minmax(0, 1.15fr) minmax(24rem, .85fr); }
@@ -15,8 +15,9 @@ button { cursor: pointer; }
 form { display: grid; gap: 1.1rem; }
 form h2, .notice h2 { margin: 0 0 .5rem; font-size: 2rem; }
 label { display: grid; gap: .45rem; color: #cbd4e5; font-size: .875rem; font-weight: 700; }
-input, select { width: 100%; padding: .85rem 1rem; border: 1px solid #344057; border-radius: .7rem; outline: none; background: #101a2c; color: #fff; }
-input:focus, select:focus { border-color: #75e6c4; box-shadow: 0 0 0 3px rgba(117, 230, 196, .12); }
+input, select, textarea { width: 100%; padding: .85rem 1rem; border: 1px solid #344057; border-radius: .7rem; outline: none; background: #101a2c; color: #fff; }
+textarea { resize: vertical; }
+input:focus, select:focus, textarea:focus { border-color: #75e6c4; box-shadow: 0 0 0 3px rgba(117, 230, 196, .12); }
 small { color: #7f8ba2; font-weight: 400; }
 .field-row { display: grid; grid-template-columns: .7fr 1.3fr; gap: .8rem; }
 .primary { border: 0; background: #75e6c4; color: #07120f; font-weight: 800; }
@@ -54,6 +55,16 @@ form > .primary { margin-top: .4rem; padding: .95rem; border-radius: .75rem; }
 .conversation-panel { min-height: 32rem; padding: 1.5rem; border: 1px solid #28344b; border-radius: 1rem; background: #0d1728; }
 .conversation-heading { border-bottom: 1px solid #28344b; padding-bottom: 1rem; }
 .conversation-heading h2 { margin: 0 0 .35rem; }
+.message-list { display: grid; gap: .8rem; }
+.message-card { display: grid; gap: .5rem; padding: 1rem; border: 1px solid #28344b; border-radius: .85rem; background: #101a2c; }
+.message-card p { margin: 0; line-height: 1.5; }
+.message-card footer { display: flex; justify-content: space-between; gap: 1rem; color: #9eabc1; font-size: .85rem; }
+.message-card.sent strong { color: #6ee7b7; }
+.message-card.failed strong { color: #fda4af; }
+.message-card.processing strong { color: #93c5fd; }
+.message-card.queued strong { color: #fcd34d; }
+.message-form { margin-top: auto; padding-top: 1rem; border-top: 1px solid #28344b; }
+.message-form .primary { padding: .85rem; border-radius: .75rem; }
 .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
 .metric-card, .history-panel { padding: 1.25rem; border: 1px solid #28344b; border-radius: 1rem; background: #0d1728; }
 .metric-card { display: grid; gap: .35rem; }

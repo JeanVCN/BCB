@@ -9,9 +9,9 @@
 - Projeto: Big Chat Brasil (BCB), desafio técnico Fullstack.
 - Última consolidação: 2026-06-23.
 - Estado atual: cadastro, ativação, RBAC, autenticação, destinatários,
-  conversas e financeiro administrativo básico implementados localmente;
-  próximo incremento recomendado é envio de mensagens com cobrança, fila,
-  worker, retry e estorno.
+  conversas, financeiro administrativo básico e envio de mensagens com
+  cobrança, fila persistente, worker, retry e estorno implementados
+  localmente.
 - Fonte inicial: documentos oficiais locais em `docs/` e definições do
   responsável pelo projeto.
 
@@ -90,6 +90,8 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
   rejeição, inativação e auditoria desse ciclo.
 - O módulo `billing` concentra consulta financeira, crédito pré-pago, ajuste
   de limite pós-pago, histórico financeiro, idempotência e lock Redis.
+- O módulo `messages` concentra envio, cobrança, histórico da conversa,
+  dispatch jobs persistentes, tentativas, worker simples, retry e estorno.
 - A persistência dos contextos usa o nome `Repository`, não `Store`, por
   representar a abstração de acesso ao agregado/dados do domínio.
 - A camada `httpserver` contém apenas roteador, middlewares e helpers de
@@ -188,6 +190,15 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
   30 segundos.
 - Falhas permanentes de validação ou negócio não entram em retry.
 - Processamento, retry e efeitos financeiros devem ser idempotentes.
+- A fila simples foi implementada com `dispatch_jobs` persistidos em
+  PostgreSQL, usando `FOR UPDATE SKIP LOCKED` para evitar processamento
+  simultâneo do mesmo job.
+- O worker roda junto da API nesta fase, com polling curto, mas a fronteira do
+  módulo permite extraí-lo futuramente para processo/serviço dedicado.
+- A simulação de disparo considera mensagens normais como sucesso. Conteúdos
+  com `[fail]` geram falha permanente e conteúdos com `[retry]` geram falhas
+  transitórias até esgotar as tentativas, permitindo demonstrar retry e estorno
+  sem provedor externo.
 
 ### Financeiro
 
@@ -323,12 +334,27 @@ Somente depois do essencial estar estável, avaliar:
   `/api/v1/admin/clients/{clientId}/financial-transactions`.
 - O frontend já apresenta resumo financeiro para o cliente, histórico
   financeiro inicial e ações administrativas simples de crédito/limite.
+- O módulo `messages` já expõe `POST /api/v1/conversations/{conversationId}/messages`
+  com `Idempotency-Key`, canal, prioridade, custo calculado, cobrança e job de
+  processamento na mesma transação.
+- `GET /api/v1/conversations/{conversationId}/messages` retorna o histórico
+  real de mensagens da conversa em ordem cronológica.
+- Mensagens normais custam 25 centavos e urgentes custam 50 centavos.
+- Pré-pago sem saldo suficiente e pós-pago sem disponibilidade não criam
+  mensagem, cobrança ou job.
+- O worker persiste tentativas em `delivery_attempts`, respeita até quatro
+  tentativas totais, agenda retry com backoff 1/2/4 segundos e estorna apenas
+  depois da falha definitiva.
+- O frontend de cliente já permite enviar mensagem, escolher SMS/WhatsApp,
+  escolher prioridade, acompanhar `queued`, `processing`, `sent` e `failed`, e
+  atualizar resumo/histórico financeiro.
 
 ## Pendências abertas
 
-Não há pendência funcional bloqueante para prosseguir para envio de mensagens,
-fila simples, worker, retry e estorno. Novas ambiguidades devem ser registradas
-antes de alterar os contratos aprovados.
+Não há pendência funcional bloqueante para finalizar o fluxo mínimo integrado.
+As próximas melhorias naturais são polimento do fluxo ponta a ponta, testes
+mais específicos, persistência após reinício validada no Docker e, se houver
+tempo, solicitação de mudança de plano.
 
 ## Onboarding e RBAC aprovados
 

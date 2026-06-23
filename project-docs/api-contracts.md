@@ -346,7 +346,11 @@ Resposta `202`:
   "createdAt": "2026-06-22T15:00:00Z",
   "billing": {
     "planType": "prepaid",
-    "balanceCents": 950
+    "prepaidBalanceCents": 950,
+    "postpaidTotalLimitCents": 0,
+    "postpaidConsumedCents": 0,
+    "postpaidAvailableCents": 0,
+    "currentPlanAvailableCents": 950
   }
 }
 ```
@@ -358,6 +362,10 @@ Erros de negócio relevantes:
 | `insufficient_balance` | 422 | Pré-pago sem saldo |
 | `limit_exceeded` | 422 | Pós-pago sem disponibilidade |
 | `client_not_active` | 403 | Empresa bloqueada |
+
+O processamento é simulado. Mensagens comuns tendem a sucesso; conteúdo com
+`[fail]` força falha permanente para demonstração, e conteúdo com `[retry]`
+força falhas transitórias até esgotar as tentativas e acionar estorno.
 | `conversation_not_found` | 404 | Ausente ou pertencente a outra empresa |
 | `idempotency_conflict` | 409 | Mesma chave com outro conteúdo |
 

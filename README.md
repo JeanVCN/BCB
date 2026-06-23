@@ -4,7 +4,7 @@
 
 ### Comunicação empresarial com controle financeiro e processamento confiável
 
-![Status](https://img.shields.io/badge/status-financeiro%20b%C3%A1sico-16a34a)
+![Status](https://img.shields.io/badge/status-envio%20com%20fila-16a34a)
 ![Backend](https://img.shields.io/badge/backend-Go%20%2B%20Gin-00ADD8)
 ![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
 ![Database](https://img.shields.io/badge/database-PostgreSQL-4169E1)
@@ -24,7 +24,8 @@ consistência, concorrência, integração e evolução arquitetural.
 
 > **Estado atual:** ambiente executável com frontend, API, PostgreSQL e Redis,
 > autocadastro, autenticação, ativação administrativa, RBAC inicial, conversas
-> financeiro administrativo básico e readiness real das dependências.
+> financeiro, envio simulado com cobrança, fila persistente, worker, retry,
+> estorno e readiness real das dependências.
 
 ## Experiência planejada
 
@@ -45,8 +46,8 @@ enfileiramento, processamento e atualização de status.
 
 | Camada | Tecnologia | Estado atual |
 |---|---|---|
-| Backend | Go 1.25+ e Gin 1.12 | Auth, RBAC, conversas, financeiro, migrations e health checks |
-| Frontend | React 19.2, TypeScript 6 e Vite 8 | Onboarding, login, admin básico, conversas e financeiro |
+| Backend | Go 1.25+ e Gin 1.12 | Auth, RBAC, conversas, financeiro, mensagens, worker e health checks |
+| Frontend | React 19.2, TypeScript 6 e Vite 8 | Onboarding, login, admin básico, conversas, financeiro e envio |
 | Persistência | PostgreSQL 17 | Integrado ao backend via migrations |
 | Coordenação | Redis 8 | Rate limit de login e lock financeiro |
 | Ambiente | Docker Compose | Serviços integrados e validados |
@@ -83,7 +84,7 @@ enfileiramento, processamento e atualização de status.
 - [x] Cadastro, ativação, RBAC e autenticação.
 - [x] Conversas e histórico inicial.
 - [x] Planos e administração financeira básica.
-- [ ] Envio, fila, worker, retry e estorno.
+- [x] Envio, fila, worker, retry e estorno.
 - [ ] Frontend responsivo e fluxo integrado.
 - [ ] Testes, documentação final e preparação da entrega.
 

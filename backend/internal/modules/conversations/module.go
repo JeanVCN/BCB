@@ -23,5 +23,4 @@ func New(dependencies Dependencies) *Module {
 func (module *Module) RegisterRoutes(client *gin.RouterGroup) {
 	client.POST("/conversations", module.handler.Create)
 	client.GET("/conversations", module.handler.List)
-	client.GET("/conversations/:conversationId/messages", module.handler.Messages)
 }

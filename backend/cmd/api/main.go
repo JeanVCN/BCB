@@ -48,14 +48,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	registry := modules.New(modules.Dependencies{
+		Config:   cfg,
+		Postgres: pool,
+		Redis:    redisClient,
+		Logger:   logger,
+	})
+
 	server := &http.Server{
 		Addr: ":" + cfg.HTTPPort,
 		Handler: httpserver.NewRouter(httpserver.Dependencies{
-			Modules: modules.New(modules.Dependencies{
-				Config:   cfg,
-				Postgres: pool,
-				Redis:    redisClient,
-			}),
+			Modules:   registry,
 			Readiness: database.Readiness{Postgres: pool, Redis: redisClient},
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
@@ -78,6 +81,8 @@ func main() {
 			os.Exit(1)
 		}
 	}()
+
+	registry.RunWorkers(shutdownSignal)
 
 	<-shutdownSignal.Done()
 	logger.Info("shutdown signal received")

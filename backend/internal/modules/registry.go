@@ -6,6 +6,9 @@ import (
 	"bcb/backend/internal/modules/accounts"
 	"bcb/backend/internal/modules/billing"
 	"bcb/backend/internal/modules/conversations"
+	"bcb/backend/internal/modules/messages"
+	"context"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,6 +19,7 @@ type Dependencies struct {
 	Config   config.Config
 	Postgres *pgxpool.Pool
 	Redis    *redis.Client
+	Logger   *slog.Logger
 }
 
 type Registry struct {
@@ -23,6 +27,7 @@ type Registry struct {
 	accounts      *accounts.Module
 	billing       *billing.Module
 	conversations *conversations.Module
+	messages      *messages.Module
 }
 
 type Routes struct {
@@ -52,11 +57,18 @@ func New(dependencies Dependencies) *Registry {
 		Postgres: dependencies.Postgres,
 	})
 
+	messagesModule := messages.New(messages.Dependencies{
+		Postgres: dependencies.Postgres,
+		Redis:    dependencies.Redis,
+		Logger:   dependencies.Logger,
+	})
+
 	return &Registry{
 		access:        accessModule,
 		accounts:      accountsModule,
 		billing:       billingModule,
 		conversations: conversationsModule,
+		messages:      messagesModule,
 	}
 }
 
@@ -69,4 +81,9 @@ func (registry *Registry) RegisterRoutes(routes Routes) {
 	registry.accounts.RegisterRoutes(routes.Public, routes.Admin)
 	registry.billing.RegisterRoutes(routes.Admin, routes.Client)
 	registry.conversations.RegisterRoutes(routes.Client)
+	registry.messages.RegisterRoutes(routes.Client)
+}
+
+func (registry *Registry) RunWorkers(ctx context.Context) {
+	go registry.messages.Worker().Run(ctx)
 }

@@ -24,7 +24,7 @@ não define endpoints, banco de dados ou estrutura de código.
 - [x] A senha nunca é persistida ou registrada em texto puro.
 - [x] Uma empresa recém-cadastrada permanece inativa.
 - [x] Uma empresa inativa não consegue autenticar.
-- [ ] Uma empresa inativa não consegue enviar mensagens.
+- [x] Uma empresa inativa não consegue enviar mensagens.
 - [x] Um administrador consegue consultar cadastros aguardando ativação.
 - [x] Somente um administrador consegue ativar ou inativar uma empresa.
 - [x] Ativação e inativação registram ator, instante e mudança realizada.
@@ -78,43 +78,43 @@ não define endpoints, banco de dados ou estrutura de código.
 
 ## 7. Envio e financeiro da mensagem
 
-- [ ] A empresa escolhe SMS ou WhatsApp e prioridade normal ou urgente.
-- [ ] Mensagem normal custa R$ 0,25 e urgente custa R$ 0,50.
-- [ ] Pré-pago sem saldo suficiente não é cobrado nem enfileirado.
-- [ ] Pós-pago sem limite disponível não é consumido nem enfileirado.
-- [ ] Uma mensagem válida registra cliente, conversa, destinatário, canal,
+- [x] A empresa escolhe SMS ou WhatsApp e prioridade normal ou urgente.
+- [x] Mensagem normal custa R$ 0,25 e urgente custa R$ 0,50.
+- [x] Pré-pago sem saldo suficiente não é cobrado nem enfileirado.
+- [x] Pós-pago sem limite disponível não é consumido nem enfileirado.
+- [x] Uma mensagem válida registra cliente, conversa, destinatário, canal,
   conteúdo, prioridade, custo e instante.
-- [ ] Cobrança, registro da mensagem e encaminhamento para processamento não
+- [x] Cobrança, registro da mensagem e encaminhamento para processamento não
   deixam estado financeiro parcial observável.
-- [ ] Repetir uma mesma solicitação identificada não gera mensagem ou cobrança
+- [x] Repetir uma mesma solicitação identificada não gera mensagem ou cobrança
   duplicada.
 
 ## 8. Fila, worker, retry e estorno
 
-- [ ] Mensagem aceita inicia como `queued` e passa por `processing`.
-- [ ] O worker processa uma mensagem no máximo uma vez simultaneamente.
-- [ ] A fila simples preserva a ordenação definida para a primeira versão.
-- [ ] Uma falha transitória realiza no máximo três retries depois da tentativa
+- [x] Mensagem aceita inicia como `queued` e passa por `processing`.
+- [x] O worker processa uma mensagem no máximo uma vez simultaneamente.
+- [x] A fila simples preserva a ordenação definida para a primeira versão.
+- [x] Uma falha transitória realiza no máximo três retries depois da tentativa
   inicial.
 - [ ] Retries usam backoff exponencial com jitter e configuração testável.
-- [ ] Falha permanente não é repetida.
-- [ ] Sucesso termina em `sent` e não gera estorno.
-- [ ] Esgotamento dos retries termina em `failed`.
-- [ ] Uma mensagem definitivamente `failed` gera exatamente um estorno ligado
+- [x] Falha permanente não é repetida.
+- [x] Sucesso termina em `sent` e não gera estorno.
+- [x] Esgotamento dos retries termina em `failed`.
+- [x] Uma mensagem definitivamente `failed` gera exatamente um estorno ligado
   à transação original.
-- [ ] Retry, processamento e estorno permanecem idempotentes após reinício ou
+- [x] Retry, processamento e estorno permanecem idempotentes após reinício ou
   execução concorrente.
 
 ## 9. Frontend e integração
 
-- [ ] O fluxo cadastro → ativação → login → conversa → envio pode ser
+- [x] O fluxo cadastro → ativação → login → conversa → envio pode ser
   demonstrado de ponta a ponta.
 - [ ] O frontend apresenta loading, vazio, erro e sucesso nas operações
   principais.
-- [ ] A lista e o histórico refletem o estado persistido no backend.
-- [ ] O frontend acompanha `queued`, `processing`, `sent` e `failed` sem
+- [x] A lista e o histórico refletem o estado persistido no backend.
+- [x] O frontend acompanha `queued`, `processing`, `sent` e `failed` sem
   apresentar falso sucesso.
-- [ ] Falhas de saldo, limite, validação, autorização e comunicação possuem
+- [x] Falhas de saldo, limite, validação, autorização e comunicação possuem
   mensagens compreensíveis.
 - [ ] O layout funciona de maneira utilizável em mobile e desktop.
 - [ ] Recarregar a página não perde dados persistidos e trata a sessão

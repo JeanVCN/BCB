@@ -7,10 +7,10 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 ## Estado do projeto
 
 - Data da consolidação: 2026-06-23.
-- Fase: destinatários, conversas e financeiro administrativo básico concluídos
-  localmente.
-- Próxima fase recomendada: envio de mensagens com cobrança, fila simples,
-  worker, retry e estorno.
+- Fase: fluxo principal de conversa, envio, cobrança, fila simples, worker,
+  retry e estorno implementado localmente.
+- Próxima fase recomendada: validação ponta a ponta, testes específicos,
+  polimento de UX e, se houver tempo, solicitação de mudança de plano.
 
 ## Escopo confirmado
 
@@ -63,6 +63,8 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Migration automática | `RUN_MIGRATIONS=true` por padrão, configurável | Facilitar avaliação local sem impedir operação controlada por pipeline |
 | Idempotência financeira | Tabela genérica de registros idempotentes para mutações administrativas | Reaproveitar a proteção em crédito e ajuste de limite sem confundir limite com movimentação financeira |
 | Ajuste de limite | Registrar em auditoria, não como transação financeira | Limite não movimenta dinheiro; transações ficam reservadas a crédito, débito, consumo e estorno |
+| Worker inicial | Rodar junto da API, consumindo jobs persistentes no PostgreSQL | Entregar o core com simplicidade e preservar caminho para extrair worker dedicado |
+| Simulação de envio | Sucesso por padrão; `[fail]` força falha permanente; `[retry]` força falha transitória até estorno | Permitir demonstrar sucesso, retry e estorno sem custo de provedor externo |
 
 ## Conclusão sobre envio e recebimento reais
 
@@ -141,6 +143,13 @@ de dinheiro. A conversão de plano permanece como etapa posterior.
 - Toda operação repetível deverá ser idempotente.
 - Após o esgotamento das tentativas, a mensagem passará para `failed` e o
   estorno será executado uma única vez, ligado à transação original.
+
+Na implementação atual, o worker simples roda no mesmo processo da API e
+consome `dispatch_jobs` persistentes no PostgreSQL usando bloqueio transacional.
+Mensagens comuns simulam sucesso. Para demonstração controlada, `[fail]` no
+conteúdo gera falha permanente e `[retry]` gera falhas transitórias até esgotar
+as quatro tentativas totais, quando ocorre a falha definitiva e o estorno
+idempotente.
 
 ## Segurança de acesso
 
@@ -290,3 +299,8 @@ Não há definição funcional bloqueante para iniciar a implementação.
 - Definido que ajuste de limite pós-pago é auditoria administrativa e não uma
   transação financeira, preservando `financial_transactions` para movimentos
   de dinheiro, consumo e estorno.
+- Implementado o módulo `messages`, com envio idempotente, custo por prioridade,
+  cobrança pré/pós-paga, persistência de mensagem, job, tentativas, worker
+  simples, retry e estorno.
+- Definida a simulação local de disparo por conteúdo: sucesso padrão, `[fail]`
+  para falha permanente e `[retry]` para falha transitória até esgotar retries.
