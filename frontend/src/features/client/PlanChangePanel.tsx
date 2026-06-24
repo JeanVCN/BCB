@@ -22,7 +22,7 @@ export function PlanChangePanel({
         <p>
           {planChange
             ? `Última solicitação: ${planLabel(planChange.fromPlan)} para ${planLabel(planChange.toPlan)} - ${planRequestStatusLabel(planChange.status)}`
-            : `Você pode solicitar troca para ${billing.planType === plans.prepaid ? 'pós-pago' : 'pré-pago'} quando não houver valor financeiro pendente.`}
+            : `Você pode solicitar troca para ${billing.planType === plans.prepaid ? 'pós-pago' : 'pré-pago'}. A aprovação administrativa exige saldo ou consumo zerado.`}
         </p>
         {planChange?.rejectionReason && <small>Motivo: {planChange.rejectionReason}</small>}
       </div>

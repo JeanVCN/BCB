@@ -5,20 +5,16 @@ export function idempotencyKey() {
 }
 
 export function maskPhoneInput(event: ChangeEvent<HTMLInputElement>) {
-  const raw = event.currentTarget.value.replace(/[^\d+]/g, '')
-  const hasPlus = raw.startsWith('+')
-  const digits = raw.replace(/\D/g, '').slice(0, 15)
+  const digits = event.currentTarget.value.replace(/\D/g, '').slice(0, 13)
   if (!digits) {
-    event.currentTarget.value = hasPlus ? '+' : ''
+    event.currentTarget.value = ''
     return
   }
-  if (digits.startsWith('55') && digits.length > 4) {
-    const country = digits.slice(0, 2)
-    const area = digits.slice(2, 4)
-    const first = digits.length > 10 ? digits.slice(4, 9) : digits.slice(4, 8)
-    const second = digits.length > 10 ? digits.slice(9, 13) : digits.slice(8, 12)
-    event.currentTarget.value = `+${country} ${area}${first ? ` ${first}` : ''}${second ? `-${second}` : ''}`
-    return
-  }
-  event.currentTarget.value = `${hasPlus ? '+' : ''}${digits}`
+  const withCountry = digits.startsWith('55') ? digits : `55${digits}`.slice(0, 13)
+  const country = withCountry.slice(0, 2)
+  const area = withCountry.slice(2, 4)
+  const number = withCountry.slice(4)
+  const first = number.length > 8 ? number.slice(0, 5) : number.slice(0, 4)
+  const second = number.length > 8 ? number.slice(5, 9) : number.slice(4, 8)
+  event.currentTarget.value = `+${country}${area ? ` (${area}` : ''}${area.length === 2 ? ')' : ''}${first ? ` ${first}` : ''}${second ? `-${second}` : ''}`
 }

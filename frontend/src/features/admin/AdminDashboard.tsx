@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { Client, PlanChangeRequest, Session } from '../../api'
-import { api } from '../../api'
+import { APIRequestError, api } from '../../api'
 import { AppHeader } from '../../components/layout/AppHeader'
 import { ToastMessage } from '../../components/ui/ToastMessage'
 import { clientStatuses, plans } from '../../domain'
@@ -12,6 +12,8 @@ import { idempotencyKey } from '../../utils/forms'
 import { clientStatusLabel, planLabel, planRequestStatusLabel } from '../../utils/format'
 import { AdminDialogView } from './AdminDialogView'
 
+type AdminView = 'dashboard' | 'requests' | 'clients'
+
 export function AdminDashboard({ session, onLogout }: { session: Session; onLogout: () => void }) {
   const [clients, setClients] = useState<Client[]>([])
   const [planRequests, setPlanRequests] = useState<PlanChangeRequest[]>([])
@@ -19,6 +21,7 @@ export function AdminDashboard({ session, onLogout }: { session: Session; onLogo
   const [error, setError] = useState('')
   const [toast, setToast] = useState<Toast | null>(null)
   const [dialog, setDialog] = useState<AdminDialog | null>(null)
+  const [activeView, setActiveView] = useState<AdminView>('dashboard')
   const [busy, setBusy] = useState(false)
   const token = session.accessToken
 
@@ -76,6 +79,10 @@ export function AdminDashboard({ session, onLogout }: { session: Session; onLogo
       setDialog(null)
       await refresh()
     } catch (failure) {
+      if (dialog.type === 'approvePlan' && failure instanceof APIRequestError && failure.code === 'financial_state_blocks_plan_change') {
+        await openZeroBalanceForPlanRequest(dialog.request)
+        return
+      }
       setError(errorMessage(failure))
     } finally {
       setBusy(false)
@@ -144,10 +151,22 @@ export function AdminDashboard({ session, onLogout }: { session: Session; onLogo
 
   async function zeroCurrentBalance(client: Client) {
     const billing = await loadAdminBilling(client)
-    if (!billing) return
+    if (!billing) return false
     const currentAmount = billing.planType === plans.prepaid ? billing.prepaidBalanceCents : billing.postpaidConsumedCents
     const actionLabel = billing.planType === plans.prepaid ? 'saldo pré-pago' : 'consumo pós-pago'
     setDialog({ type: 'zero', client, currentAmount, actionLabel, reason: 'Preparação para mudança de plano' })
+    return true
+  }
+
+  async function openZeroBalanceForPlanRequest(request: PlanChangeRequest) {
+    const client = clients.find(item => item.id === request.clientId)
+    if (!client) {
+      setError('Cliente da solicitação não foi encontrado na lista administrativa.')
+      return
+    }
+    const opened = await zeroCurrentBalance(client)
+    if (!opened) return
+    setToast({ type: 'error', text: 'Antes de aprovar a mudança de plano, zere o saldo ou consumo pendente deste cliente.' })
   }
 
   async function zeroCurrentBalanceSubmit(client: Client, reason: string) {
@@ -182,26 +201,42 @@ export function AdminDashboard({ session, onLogout }: { session: Session; onLogo
   }
 
   return (
-    <main className="dashboard">
+    <main className={`dashboard app-shell view-${activeView}`}>
       <ToastMessage toast={toast} onClose={() => setToast(null)} />
       <AdminDialogView dialog={dialog} busy={busy} onChange={setDialog} onClose={() => setDialog(null)} onSubmit={submitDialog} />
-      <AppHeader eyebrow="Administração" title="Painel operacional">
-        <a href="#solicitacoes">Solicitações</a>
-        <a href="#clientes">Clientes</a>
+      <AppHeader eyebrow="Administração" title={adminViewTitle(activeView)}>
+        <button className={activeView === 'dashboard' ? 'active' : ''} onClick={() => setActiveView('dashboard')}>Dashboard</button>
+        <button className={activeView === 'requests' ? 'active' : ''} onClick={() => setActiveView('requests')}>Solicitações</button>
+        <button className={activeView === 'clients' ? 'active' : ''} onClick={() => setActiveView('clients')}>Clientes</button>
         <button onClick={onLogout}>Sair</button>
       </AppHeader>
       {error && <p className="error">{error}</p>}
-      {summary && (
-        <section className="summary-grid admin-metrics">
-          <article className="metric-card"><span>Cadastros pendentes</span><strong>{summary.pendingClientActivations}</strong></article>
-          <article className="metric-card"><span>Mudanças de plano</span><strong>{summary.pendingPlanChanges}</strong></article>
-          <article className="metric-card"><span>Clientes ativos</span><strong>{adminStats.active}</strong></article>
-          <article className="metric-card"><span>Total de clientes</span><strong>{adminStats.total}</strong></article>
-          <article className="metric-card"><span>Bloqueados/rejeitados</span><strong>{adminStats.blocked}</strong></article>
-          <article className="metric-card"><span>Fila de aprovação</span><strong>{adminStats.pending + summary.pendingPlanChanges}</strong></article>
+      {activeView === 'dashboard' && summary && (
+        <section className="page-view overview-view">
+          <AdminMetrics summary={summary} stats={adminStats} />
+          <div className="operations-grid">
+            <article className="operation-panel primary-panel">
+              <span className="eyebrow">Fila</span>
+              <h2>{adminStats.pending + summary.pendingPlanChanges}</h2>
+              <p>Itens aguardando decisão administrativa.</p>
+              <button className="primary" onClick={() => setActiveView(summary.pendingPlanChanges > 0 ? 'requests' : 'clients')}>Abrir fila</button>
+            </article>
+            <article className="operation-panel">
+              <span className="eyebrow">Clientes</span>
+              <h2>{adminStats.active} ativos</h2>
+              <p>{adminStats.blocked} bloqueados ou rejeitados.</p>
+              <button onClick={() => setActiveView('clients')}>Gerenciar clientes</button>
+            </article>
+            <article className="operation-panel">
+              <span className="eyebrow">Mudanças de plano</span>
+              <h2>{summary.pendingPlanChanges}</h2>
+              <p>Solicitações pendentes de aprovação ou rejeição.</p>
+              <button onClick={() => setActiveView('requests')}>Ver solicitações</button>
+            </article>
+          </div>
         </section>
       )}
-      <section className="admin-section" id="solicitacoes">
+      {activeView === 'requests' && <section className="admin-section page-view">
         <h2>Solicitações de mudança de plano</h2>
         {planRequests.length === 0 ? (
           <p className="muted">Nenhuma solicitação pendente.</p>
@@ -219,8 +254,8 @@ export function AdminDashboard({ session, onLogout }: { session: Session; onLogo
             </div>
           </article>
         ))}
-      </section>
-      <section className="client-list" id="clientes">
+      </section>}
+      {activeView === 'clients' && <section className="client-list page-view">
         {clients.length === 0 ? (
           <div className="empty-state"><h2>Nenhum cadastro</h2><p>Novas solicitações aparecerão aqui.</p></div>
         ) : clients.map(client => (
@@ -248,7 +283,32 @@ export function AdminDashboard({ session, onLogout }: { session: Session; onLogo
             </div>
           </article>
         ))}
-      </section>
+      </section>}
     </main>
   )
+}
+
+function AdminMetrics({
+  summary,
+  stats,
+}: {
+  summary: { pendingClientActivations: number; pendingPlanChanges: number }
+  stats: { active: number; pending: number; blocked: number; total: number }
+}) {
+  return (
+    <section className="summary-grid admin-metrics">
+      <article className="metric-card"><span>Cadastros pendentes</span><strong>{summary.pendingClientActivations}</strong></article>
+      <article className="metric-card"><span>Mudanças de plano</span><strong>{summary.pendingPlanChanges}</strong></article>
+      <article className="metric-card"><span>Clientes ativos</span><strong>{stats.active}</strong></article>
+      <article className="metric-card"><span>Total de clientes</span><strong>{stats.total}</strong></article>
+      <article className="metric-card"><span>Bloqueados/rejeitados</span><strong>{stats.blocked}</strong></article>
+      <article className="metric-card"><span>Fila de aprovação</span><strong>{stats.pending + summary.pendingPlanChanges}</strong></article>
+    </section>
+  )
+}
+
+function adminViewTitle(view: AdminView) {
+  if (view === 'requests') return 'Solicitações'
+  if (view === 'clients') return 'Clientes'
+  return 'Painel operacional'
 }

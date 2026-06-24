@@ -16,6 +16,7 @@ export function ConversationWorkspace({
   messagesEndRef,
   onCreateConversation,
   onOpenConversation,
+  onCloseConversation,
   onSendMessage,
 }: {
   conversations: Conversation[]
@@ -27,15 +28,16 @@ export function ConversationWorkspace({
   messagesEndRef: RefObject<HTMLDivElement | null>
   onCreateConversation: (event: FormEvent<HTMLFormElement>) => void
   onOpenConversation: (conversation: Conversation) => void
+  onCloseConversation: () => void
   onSendMessage: (event: FormEvent<HTMLFormElement>) => void
 }) {
   return (
-    <section className="conversation-layout" id="conversas">
+    <section className={`conversation-layout chat-workspace ${selected ? 'has-selection' : ''}`}>
       <aside className="conversation-sidebar">
         <form onSubmit={onCreateConversation} className="compact-form">
           <h2>Novo destinatário</h2>
           <label>Nome<input name="name" required /></label>
-          <label>Telefone<input name="phone" placeholder="+55 11 99999-9999" required onChange={maskPhoneInput} /></label>
+          <label>Telefone<input name="phone" placeholder="+55 (55) 5555-5555" required onChange={maskPhoneInput} /></label>
           <SubmitButton loading={loading} label="Criar conversa" />
         </form>
         <ConversationList
@@ -50,7 +52,7 @@ export function ConversationWorkspace({
           <div className="empty-state"><h2>Selecione uma conversa</h2><p>O histórico aparecerá aqui.</p></div>
         ) : (
           <>
-            <ConversationHeading conversation={selected} stats={messageStats} />
+            <ConversationHeading conversation={selected} stats={messageStats} onBack={onCloseConversation} />
             <MessageList messages={messages} messagesEndRef={messagesEndRef} />
             <MessageComposer loading={loading} onSendMessage={onSendMessage} />
           </>
@@ -94,9 +96,12 @@ function ConversationList({
   )
 }
 
-function ConversationHeading({ conversation, stats }: { conversation: Conversation; stats: MessageStats }) {
+function ConversationHeading({ conversation, stats, onBack }: { conversation: Conversation; stats: MessageStats; onBack: () => void }) {
   return (
     <div className="conversation-heading">
+      <button type="button" className="mobile-back" onClick={onBack} aria-label="Voltar para conversas" title="Voltar para conversas">
+        <span className="mobile-back-icon" aria-hidden="true" />
+      </button>
       <div>
         <h2>{conversation.recipient.name}</h2>
         <p>{conversation.recipient.phone}</p>

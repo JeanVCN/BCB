@@ -8,11 +8,14 @@ import { planRequestStatuses, plans } from '../../domain'
 import type { Toast } from '../../types/ui'
 import { errorMessage, nullWhenNotFound } from '../../utils/errors'
 import { idempotencyKey } from '../../utils/forms'
+import { formatMoney } from '../../utils/format'
 import { conversationMessageStats } from '../../utils/stats'
 import { ClientMetrics } from './ClientMetrics'
 import { ConversationWorkspace } from './ConversationWorkspace'
 import { FinancialHistory } from './FinancialHistory'
 import { PlanChangePanel } from './PlanChangePanel'
+
+type ClientView = 'dashboard' | 'conversations' | 'finance'
 
 export function ClientHome({ session, onLogout }: { session: Session; onLogout: () => void }) {
   const token = session.accessToken
@@ -26,6 +29,7 @@ export function ClientHome({ session, onLogout }: { session: Session; onLogout: 
   const [loading, setLoading] = useState(false)
   const [loadingConversations, setLoadingConversations] = useState(true)
   const [toast, setToast] = useState<Toast | null>(null)
+  const [activeView, setActiveView] = useState<ClientView>('conversations')
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
   const clientStats = useMemo(() => conversationMessageStats(messages), [messages])
@@ -90,9 +94,13 @@ export function ClientHome({ session, onLogout }: { session: Session; onLogout: 
     return () => window.clearInterval(interval)
   }, [loadMessages, refreshBilling, selected])
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ block: 'end' })
-  }, [messages, selected])
+  function scrollMessagesToEnd() {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ block: 'end' })
+      })
+    })
+  }
 
   async function createConversation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -107,6 +115,7 @@ export function ClientHome({ session, onLogout }: { session: Session; onLogout: 
       form.reset()
       await refreshConversations()
       await openConversation(conversation)
+      setActiveView('conversations')
       setToast({ type: 'success', text: 'Conversa pronta para envio.' })
     } catch (reason) {
       setError(errorMessage(reason))
@@ -118,6 +127,7 @@ export function ClientHome({ session, onLogout }: { session: Session; onLogout: 
   async function openConversation(conversation: Conversation) {
     setSelected(conversation)
     await loadMessages(conversation)
+    scrollMessagesToEnd()
   }
 
   async function sendMessage(event: FormEvent<HTMLFormElement>) {
@@ -136,6 +146,7 @@ export function ClientHome({ session, onLogout }: { session: Session; onLogout: 
       setBilling(response.billing)
       form.reset()
       await loadMessages(selected)
+      scrollMessagesToEnd()
       await refreshConversations()
       await refreshBilling()
       setToast({ type: 'success', text: 'Mensagem enfileirada e cobrança registrada.' })
@@ -180,37 +191,129 @@ export function ClientHome({ session, onLogout }: { session: Session; onLogout: 
   }
 
   return (
-    <main className="dashboard">
+    <main className={`dashboard app-shell view-${activeView}`}>
       <ToastMessage toast={toast} onClose={() => setToast(null)} />
-      <AppHeader eyebrow="Área do cliente" title="Operação de mensagens">
-        <a href="#conversas">Conversas</a>
-        <a href="#financeiro">Financeiro</a>
+      <AppHeader
+        eyebrow="Área do cliente"
+        title={clientViewTitle(activeView)}
+        meta={billing ? <span className="header-balance">Disponível: <strong>{formatMoney(billing.currentPlanAvailableCents)}</strong></span> : null}
+      >
+        <button className={activeView === 'dashboard' ? 'active' : ''} onClick={() => setActiveView('dashboard')}>Dashboard</button>
+        <button className={activeView === 'conversations' ? 'active' : ''} onClick={() => setActiveView('conversations')}>Conversas</button>
+        <button className={activeView === 'finance' ? 'active' : ''} onClick={() => setActiveView('finance')}>Financeiro</button>
         <button onClick={onLogout}>Sair</button>
       </AppHeader>
       {error && <p className="error">{error}</p>}
-      {billing && <ClientMetrics billing={billing} conversations={conversations} messages={messages} />}
-      {billing && (
-        <PlanChangePanel
+      {activeView === 'dashboard' && billing && (
+        <ClientDashboardView
           billing={billing}
+          conversations={conversations}
+          messages={messages}
+          transactions={transactions}
           planChange={planChange}
           loading={loading}
-          onRequest={() => void requestPlanChange()}
-          onCancel={() => void cancelPlanChange()}
+          onRequestPlanChange={() => void requestPlanChange()}
+          onCancelPlanChange={() => void cancelPlanChange()}
+          onOpenConversations={() => setActiveView('conversations')}
+          onOpenFinance={() => setActiveView('finance')}
         />
       )}
-      <ConversationWorkspace
-        conversations={conversations}
-        selected={selected}
-        messages={messages}
-        messageStats={clientStats}
-        loading={loading}
-        loadingConversations={loadingConversations}
-        messagesEndRef={messagesEndRef}
-        onCreateConversation={createConversation}
-        onOpenConversation={conversation => void openConversation(conversation)}
-        onSendMessage={sendMessage}
-      />
-      <FinancialHistory transactions={transactions} />
+      {activeView === 'conversations' && (
+        <ConversationWorkspace
+          conversations={conversations}
+          selected={selected}
+          messages={messages}
+          messageStats={clientStats}
+          loading={loading}
+          loadingConversations={loadingConversations}
+          messagesEndRef={messagesEndRef}
+          onCreateConversation={createConversation}
+          onOpenConversation={conversation => void openConversation(conversation)}
+          onCloseConversation={() => setSelected(null)}
+          onSendMessage={sendMessage}
+        />
+      )}
+      {activeView === 'finance' && billing && (
+        <section className="page-view finance-view">
+          <div className="finance-grid">
+            <ClientMetrics billing={billing} conversations={conversations} messages={messages} />
+            <PlanChangePanel
+              billing={billing}
+              planChange={planChange}
+              loading={loading}
+              onRequest={() => void requestPlanChange()}
+              onCancel={() => void cancelPlanChange()}
+            />
+            <FinancialHistory transactions={transactions} />
+          </div>
+        </section>
+      )}
     </main>
   )
+}
+
+function ClientDashboardView({
+  billing,
+  conversations,
+  messages,
+  transactions,
+  planChange,
+  loading,
+  onRequestPlanChange,
+  onCancelPlanChange,
+  onOpenConversations,
+  onOpenFinance,
+}: {
+  billing: BillingProfile
+  conversations: Conversation[]
+  messages: Message[]
+  transactions: FinancialTransaction[]
+  planChange: PlanChangeRequest | null
+  loading: boolean
+  onRequestPlanChange: () => void
+  onCancelPlanChange: () => void
+  onOpenConversations: () => void
+  onOpenFinance: () => void
+}) {
+  const lastConversation = conversations[0]
+  const lastTransaction = transactions[0]
+
+  return (
+    <section className="page-view overview-view">
+      <ClientMetrics billing={billing} conversations={conversations} messages={messages} />
+      <div className="operations-grid">
+        <article className="operation-panel primary-panel">
+          <span className="eyebrow">Conta</span>
+          <h2>{billing.planType === plans.prepaid ? 'Pré-pago' : 'Pós-pago'}</h2>
+          <p>Disponível atual: <strong>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(billing.currentPlanAvailableCents / 100)}</strong></p>
+          <button className="primary" onClick={onOpenFinance}>Ver financeiro</button>
+        </article>
+        <article className="operation-panel">
+          <span className="eyebrow">Último atendimento</span>
+          <h2>{lastConversation ? lastConversation.recipient.name : 'Sem conversas'}</h2>
+          <p>{lastConversation?.lastActivityAt ? new Date(lastConversation.lastActivityAt).toLocaleString('pt-BR') : 'Nenhuma atividade recente.'}</p>
+          <button onClick={onOpenConversations}>Abrir conversas</button>
+        </article>
+        <article className="operation-panel">
+          <span className="eyebrow">Última movimentação</span>
+          <h2>{lastTransaction ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lastTransaction.amountCents / 100) : 'Sem histórico'}</h2>
+          <p>{lastTransaction ? new Date(lastTransaction.createdAt).toLocaleString('pt-BR') : 'Movimentações aparecerão aqui.'}</p>
+          <button onClick={onOpenFinance}>Abrir histórico</button>
+        </article>
+      </div>
+      <PlanChangePanel
+        billing={billing}
+        planChange={planChange}
+        loading={loading}
+        onRequest={onRequestPlanChange}
+        onCancel={onCancelPlanChange}
+      />
+    </section>
+  )
+}
+
+function clientViewTitle(view: ClientView) {
+  if (view === 'conversations') return 'Conversas'
+  if (view === 'finance') return 'Financeiro'
+  return 'Dashboard'
 }

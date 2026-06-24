@@ -112,7 +112,7 @@ function dialogDescription(dialog: Exclude<AdminDialog, { type: 'transactions' }
   if (dialog.type === 'rejectClient') return 'A rejeição preserva o cadastro para auditoria e impede duplicidade do documento.'
   if (dialog.type === 'credit') return 'O crédito entra no histórico financeiro com idempotência e auditoria.'
   if (dialog.type === 'limit') return 'O limite total será atualizado sem apagar o consumo já registrado.'
-  if (dialog.type === 'zero') return 'Use esta ação para liberar uma futura solicitação de mudança de plano quando fizer sentido operacional.'
+  if (dialog.type === 'zero') return 'Use esta ação para liberar a aprovação de mudança de plano quando fizer sentido operacional.'
   if (dialog.type === 'approvePlan') return `Destino: ${planLabel(dialog.request.toPlan)}. Informe ${dialog.request.toPlan === plans.prepaid ? 'saldo inicial' : 'limite total'} em centavos.`
   return 'Informe um motivo claro para registrar a decisão administrativa.'
 }
