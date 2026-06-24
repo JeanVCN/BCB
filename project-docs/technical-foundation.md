@@ -78,6 +78,16 @@
 - Testes do backend com `go test ./...`.
 - Lint e build de produção do frontend.
 - Build de produção do frontend com o fluxo de mudança de plano.
+- Validação E2E em Docker com cadastro, ativação, login, conversa, envio
+  simulado, falha permanente, retry, estorno, saldo zerado e aprovação de
+  mudança de plano.
+- Validação de persistência após `docker compose restart`, confirmando login,
+  plano vigente, conversa e mensagens previamente criadas.
+- Busca em logs do Compose por senha, token, JWT, secret, bearer,
+  authorization e hash sem ocorrências sensíveis no fluxo validado.
+- Lint do frontend com `npm run lint`.
+- Ajustes de responsividade por CSS para evitar overflow em conteúdo longo,
+  reduzir raios de cartões/controles e remover escala tipográfica por viewport.
 - Validação estrutural do Docker Compose.
 - Build das imagens de backend e frontend.
 - Inicialização dos quatro serviços com health checks saudáveis.

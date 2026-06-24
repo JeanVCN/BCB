@@ -411,7 +411,18 @@ function AdminDashboard({ session, onLogout }: { session: Session; onLogout: () 
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Erro inesperado.') }
   }
   useEffect(() => {
-    void refresh()
+    void Promise.all([
+      api.clients(token),
+      api.adminSummary(token),
+      api.adminPlanChangeRequests(token),
+    ])
+      .then(([clientResponse, summaryResponse, requestResponse]) => {
+        setClients(clientResponse.items)
+        setSummary(summaryResponse)
+        setPlanRequests(requestResponse.items)
+        setError('')
+      })
+      .catch(reason => setError(reason instanceof Error ? reason.message : 'Erro inesperado.'))
   }, [token])
 
   async function activate(client: Client) {

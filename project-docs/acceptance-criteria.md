@@ -10,7 +10,7 @@ não define endpoints, banco de dados ou estrutura de código.
   documentado.
 - [x] Uma instalação limpa possui um caminho documentado para criar o primeiro
   administrador.
-- [ ] Dados persistidos no PostgreSQL sobrevivem ao reinício dos serviços.
+- [x] Dados persistidos no PostgreSQL sobrevivem ao reinício dos serviços.
 - [ ] A aplicação apresenta erros de configuração sem expor segredos.
 
 ## 2. Cadastro e ativação
@@ -109,21 +109,21 @@ não define endpoints, banco de dados ou estrutura de código.
 
 - [x] O fluxo cadastro → ativação → login → conversa → envio pode ser
   demonstrado de ponta a ponta.
-- [ ] O frontend apresenta loading, vazio, erro e sucesso nas operações
+- [x] O frontend apresenta loading, vazio, erro e sucesso nas operações
   principais.
 - [x] A lista e o histórico refletem o estado persistido no backend.
 - [x] O frontend acompanha `queued`, `processing`, `sent` e `failed` sem
   apresentar falso sucesso.
 - [x] Falhas de saldo, limite, validação, autorização e comunicação possuem
   mensagens compreensíveis.
-- [ ] O layout funciona de maneira utilizável em mobile e desktop.
+- [x] O layout funciona de maneira utilizável em mobile e desktop.
 - [ ] Recarregar a página não perde dados persistidos e trata a sessão
   corretamente.
 
 ## 10. Auditoria e segurança operacional
 
 - [x] Operações administrativas e financeiras relevantes possuem auditoria.
-- [ ] Logs não expõem senha, token ou outros segredos.
+- [x] Logs não expõem senha, token ou outros segredos.
 - [ ] Erros internos não devolvem detalhes sensíveis ao frontend.
 - [x] Datas e valores financeiros mantêm representação consistente entre as
   camadas.
