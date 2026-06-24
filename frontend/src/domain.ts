@@ -19,6 +19,15 @@ export const plans = {
 
 export type Plan = typeof plans[keyof typeof plans]
 
+export const planRequestStatuses = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+  cancelled: 'cancelled',
+} as const
+
+export type PlanRequestStatus = typeof planRequestStatuses[keyof typeof planRequestStatuses]
+
 export const channels = {
   sms: 'sms',
   whatsapp: 'whatsapp',

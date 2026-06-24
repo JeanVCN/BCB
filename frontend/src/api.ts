@@ -1,4 +1,4 @@
-import type { Channel, ClientStatus, DocumentType, FinancialTransactionType, MessageStatus, Plan, Priority, Role } from './domain'
+import type { Channel, ClientStatus, DocumentType, FinancialTransactionType, MessageStatus, Plan, PlanRequestStatus, Priority, Role } from './domain'
 
 export interface Session {
   accessToken: string
@@ -66,8 +66,38 @@ export interface FinancialTransaction {
   createdAt: string
 }
 
+export interface PlanChangeRequest {
+  id: string
+  clientId: string
+  clientName?: string
+  fromPlan: Plan
+  toPlan: Plan
+  status: PlanRequestStatus
+  rejectionReason?: string
+  createdAt: string
+  cancelledAt?: string
+  decidedAt?: string
+}
+
+export interface AdminSummary {
+  pendingClientActivations: number
+  pendingPlanChanges: number
+}
+
 interface APIError {
-  error?: { message?: string }
+  error?: { code?: string; message?: string }
+}
+
+export class APIRequestError extends Error {
+  status: number
+  code?: string
+
+  constructor(status: number, message: string, code?: string) {
+    super(message)
+    this.name = 'APIRequestError'
+    this.status = status
+    this.code = code
+  }
 }
 
 async function request<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
@@ -82,7 +112,7 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
 
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as APIError
-    throw new Error(body.error?.message ?? 'Não foi possível concluir a operação.')
+    throw new APIRequestError(response.status, body.error?.message ?? 'Não foi possível concluir a operação.', body.error?.code)
   }
 
   if (response.status === 204) return undefined as T
@@ -118,6 +148,21 @@ export const api = {
   ),
   billing: (token: string) => request<BillingProfile>('/billing', {}, token),
   billingTransactions: (token: string) => request<{ items: FinancialTransaction[] }>('/billing/transactions', {}, token),
+  currentPlanChangeRequest: (token: string) => request<PlanChangeRequest>('/plan-change-requests/current', {}, token),
+  createPlanChangeRequest: (token: string, body: object) => request<PlanChangeRequest>('/plan-change-requests', {
+    method: 'POST', body: JSON.stringify(body),
+  }, token),
+  cancelPlanChangeRequest: (token: string, requestId: string) => request<void>(
+    `/plan-change-requests/${requestId}/cancel`, { method: 'POST' }, token,
+  ),
+  adminSummary: (token: string) => request<AdminSummary>('/admin/notifications/summary', {}, token),
+  adminPlanChangeRequests: (token: string) => request<{ items: PlanChangeRequest[] }>('/admin/plan-change-requests?status=pending', {}, token),
+  approvePlanChangeRequest: (token: string, requestId: string, body: object) => request<void>(
+    `/admin/plan-change-requests/${requestId}/approve`, { method: 'POST', body: JSON.stringify(body) }, token,
+  ),
+  rejectPlanChangeRequest: (token: string, requestId: string, reason: string) => request<void>(
+    `/admin/plan-change-requests/${requestId}/reject`, { method: 'POST', body: JSON.stringify({ reason }) }, token,
+  ),
   conversations: (token: string) => request<{ items: Conversation[] }>('/conversations', {}, token),
   createConversation: (token: string, body: object) => request<Conversation>('/conversations', {
     method: 'POST', body: JSON.stringify(body),

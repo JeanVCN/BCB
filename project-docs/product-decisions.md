@@ -6,11 +6,11 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 
 ## Estado do projeto
 
-- Data da consolidação: 2026-06-23.
+- Data da consolidação: 2026-06-24.
 - Fase: fluxo principal de conversa, envio, cobrança, fila simples, worker,
-  retry e estorno implementado localmente.
+  retry, estorno e mudança de plano implementados localmente.
 - Próxima fase recomendada: validação ponta a ponta, testes específicos,
-  polimento de UX e, se houver tempo, solicitação de mudança de plano.
+  polimento de UX, responsividade e revisão de segurança operacional.
 
 ## Escopo confirmado
 
@@ -120,7 +120,8 @@ Na implementação atual, crédito pré-pago e ajuste de limite pós-pago já es
 disponíveis para administradores e exigem `Idempotency-Key`. Créditos geram
 registros imutáveis em `financial_transactions`; ajustes de limite são
 auditados em `audit_events`, porque não representam entrada, saída ou reversão
-de dinheiro. A conversão de plano permanece como etapa posterior.
+de dinheiro. A conversão de plano é executada pelo workflow de solicitação de
+mudança de plano, com decisão administrativa e auditoria.
 
 ### Mudança de plano
 
@@ -137,6 +138,15 @@ de dinheiro. A conversão de plano permanece como etapa posterior.
 - Solicitação e todas as transições posteriores devem registrar auditoria.
 - Administradores serão notificados por contador e lista no painel; e-mail,
   push e atualização em tempo real ficam fora do escopo inicial.
+
+Na implementação atual, `plan_change_requests` registra a solicitação, a
+empresa solicitante, o plano de origem/destino, o status e os atores das
+transições. O cliente cria e cancela solicitações próprias, e o administrador
+lista, aprova ou rejeita pendências. A aprovação revalida status ativo,
+saldo/consumo zerado e plano de origem dentro da transação que altera
+`billing_profiles`; solicitações rejeitadas exigem motivo. O resumo
+administrativo inclui contador de cadastros pendentes e mudanças de plano
+pendentes.
 
 ## Retry e estorno
 

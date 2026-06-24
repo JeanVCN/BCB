@@ -21,7 +21,7 @@
 - O primeiro administrador é criado por binário dedicado e idempotente,
   configurado por variáveis de ambiente.
 - O backend agrupa contextos em `internal/modules`, atualmente com `access`,
-  `accounts`, `conversations`, `billing` e `messages`.
+  `accounts`, `conversations`, `billing`, `messages` e `planchanges`.
 - Cada módulo usa `Repository` como abstração de persistência e mantém seu
   service, handler e registro de rotas.
 - `httpserver` mantém o roteador, middlewares e respostas compartilhadas.
@@ -63,11 +63,21 @@
 - O frontend cobre onboarding/autenticação/admin básico, fluxo inicial de
   conversas, visualização/ações financeiras básicas e envio/acompanhamento de
   mensagens.
+- O módulo `planchanges` cobre solicitação, consulta atual, cancelamento,
+  listagem administrativa, aprovação, rejeição, contador administrativo e
+  auditoria da mudança de plano.
+- A aprovação de mudança de plano revalida conta ativa, plano de origem e
+  saldo/consumo zerado dentro da mesma transação que altera
+  `billing_profiles`.
+- As rotas administrativas financeiras do módulo `billing` são registradas
+  dentro do grupo `/admin` sem repetir o prefixo, mantendo o contrato
+  `/api/v1/admin/clients/...`.
 
 ## Validação realizada
 
 - Testes do backend com `go test ./...`.
 - Lint e build de produção do frontend.
+- Build de produção do frontend com o fluxo de mudança de plano.
 - Validação estrutural do Docker Compose.
 - Build das imagens de backend e frontend.
 - Inicialização dos quatro serviços com health checks saudáveis.

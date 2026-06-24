@@ -7,11 +7,11 @@
 ## Metadados
 
 - Projeto: Big Chat Brasil (BCB), desafio técnico Fullstack.
-- Última consolidação: 2026-06-23.
+- Última consolidação: 2026-06-24.
 - Estado atual: cadastro, ativação, RBAC, autenticação, destinatários,
   conversas, financeiro administrativo básico e envio de mensagens com
-  cobrança, fila persistente, worker, retry e estorno implementados
-  localmente.
+  cobrança, fila persistente, worker, retry, estorno e solicitação de mudança
+  de plano implementados localmente.
 - Fonte inicial: documentos oficiais locais em `docs/` e definições do
   responsável pelo projeto.
 
@@ -274,7 +274,8 @@ Somente depois do essencial estar estável, avaliar:
 4. implementar os dois planos e administração financeira;
 5. implementar envio, fila simples, worker, retry, estorno e status;
 6. integrar a experiência completa no frontend;
-7. adicionar testes, refinamentos e evoluções condicionadas ao tempo.
+7. implementar solicitação de mudança de plano;
+8. adicionar testes, refinamentos e evoluções condicionadas ao tempo.
 
 ## Estratégia de versionamento
 
@@ -380,13 +381,27 @@ Somente depois do essencial estar estável, avaliar:
   entre pacotes, contratos externos ou exigências da linguagem, como testes
   `Test...`. Handlers, services e repositories usados apenas dentro do próprio
   pacote devem permanecer não exportados.
+- O módulo `planchanges` implementa o workflow de mudança de plano com
+  `plan_change_requests`, estados `pending`, `approved`, `rejected` e
+  `cancelled`, regra de uma solicitação pendente por empresa, auditoria em
+  cada transição e aprovação administrativa atômica com alteração do perfil
+  financeiro.
+- O cliente acessa `/api/v1/plan-change-requests`, consulta a solicitação mais
+  recente e cancela pendências próprias. O admin acessa
+  `/api/v1/admin/plan-change-requests`, aprova/rejeita pendências e consulta
+  `/api/v1/admin/notifications/summary` com contador de cadastros e mudanças
+  pendentes.
+- Em 2026-06-24 foi corrigido o registro das rotas financeiras administrativas
+  do módulo `billing`: como o router já monta o grupo `/admin`, as rotas agora
+  são registradas como `/clients/...`, preservando o contrato público
+  `/api/v1/admin/clients/...`.
 
 ## Pendências abertas
 
 Não há pendência funcional bloqueante para finalizar o fluxo mínimo integrado.
 As próximas melhorias naturais são polimento do fluxo ponta a ponta, testes
-mais específicos, persistência após reinício validada no Docker e, se houver
-tempo, solicitação de mudança de plano.
+mais específicos, persistência após reinício validada no Docker, responsividade
+e revisão de segurança operacional de logs/erros.
 
 ## Onboarding e RBAC aprovados
 

@@ -7,6 +7,7 @@ import (
 	"bcb/backend/internal/modules/billing"
 	"bcb/backend/internal/modules/conversations"
 	"bcb/backend/internal/modules/messages"
+	"bcb/backend/internal/modules/planchanges"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -25,6 +26,7 @@ type Registry struct {
 	billing       *billing.Module
 	conversations *conversations.Module
 	messages      *messages.Module
+	planChanges   *planchanges.Module
 }
 
 type Routes struct {
@@ -59,12 +61,17 @@ func New(dependencies Dependencies) *Registry {
 		Redis:    dependencies.Redis,
 	})
 
+	planChangesModule := planchanges.New(planchanges.Dependencies{
+		Postgres: dependencies.Postgres,
+	})
+
 	return &Registry{
 		access:        accessModule,
 		accounts:      accountsModule,
 		billing:       billingModule,
 		conversations: conversationsModule,
 		messages:      messagesModule,
+		planChanges:   planChangesModule,
 	}
 }
 
@@ -78,4 +85,5 @@ func (registry *Registry) RegisterRoutes(routes Routes) {
 	registry.billing.RegisterRoutes(routes.Admin, routes.Client)
 	registry.conversations.RegisterRoutes(routes.Client)
 	registry.messages.RegisterRoutes(routes.Client)
+	registry.planChanges.RegisterRoutes(routes.Admin, routes.Client)
 }

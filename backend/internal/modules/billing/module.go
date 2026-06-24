@@ -27,7 +27,7 @@ func (module *Module) RegisterRoutes(admin, client *gin.RouterGroup) {
 	client.GET("/billing", module.handler.profile)
 	client.GET("/billing/transactions", module.handler.clientTransactions)
 
-	admin.POST("/admin/clients/:clientId/credits", module.handler.addCredit)
-	admin.PUT("/admin/clients/:clientId/postpaid-limit", module.handler.adjustPostpaidLimit)
-	admin.GET("/admin/clients/:clientId/financial-transactions", module.handler.adminTransactions)
+	admin.POST("/clients/:clientId/credits", module.handler.addCredit)
+	admin.PUT("/clients/:clientId/postpaid-limit", module.handler.adjustPostpaidLimit)
+	admin.GET("/clients/:clientId/financial-transactions", module.handler.adminTransactions)
 }

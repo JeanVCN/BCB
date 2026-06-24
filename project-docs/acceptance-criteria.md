@@ -56,15 +56,15 @@ não define endpoints, banco de dados ou estrutura de código.
 
 ## 5. Solicitação de mudança de plano
 
-- [ ] Cliente pré-pago somente solicita mudança com saldo igual a zero.
-- [ ] Cliente pós-pago somente solicita mudança com consumo igual a zero.
-- [ ] Um cliente não cria duas solicitações pendentes.
-- [ ] O cliente pode cancelar sua solicitação pendente.
-- [ ] O painel administrativo exibe contador e lista de solicitações pendentes.
-- [ ] Um administrador pode aprovar ou rejeitar uma solicitação.
-- [ ] A aprovação revalida autorização e condição financeira.
-- [ ] Uma aprovação inválida não altera o plano.
-- [ ] `pending`, `approved`, `rejected` e `cancelled` são transições
+- [x] Cliente pré-pago somente solicita mudança com saldo igual a zero.
+- [x] Cliente pós-pago somente solicita mudança com consumo igual a zero.
+- [x] Um cliente não cria duas solicitações pendentes.
+- [x] O cliente pode cancelar sua solicitação pendente.
+- [x] O painel administrativo exibe contador e lista de solicitações pendentes.
+- [x] Um administrador pode aprovar ou rejeitar uma solicitação.
+- [x] A aprovação revalida autorização e condição financeira.
+- [x] Uma aprovação inválida não altera o plano.
+- [x] `pending`, `approved`, `rejected` e `cancelled` são transições
   controladas e auditáveis.
 
 ## 6. Conversas

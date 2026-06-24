@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { api } from './api'
-import type { BillingProfile, Client, Conversation, FinancialTransaction, Message, Session } from './api'
-import { clientStatuses, channels, documentTypes, financialTransactionTypes, messageStatuses, plans, priorities, roles } from './domain'
+import { APIRequestError, api } from './api'
+import type { BillingProfile, Client, Conversation, FinancialTransaction, Message, PlanChangeRequest, Session } from './api'
+import { clientStatuses, channels, documentTypes, financialTransactionTypes, messageStatuses, planRequestStatuses, plans, priorities, roles } from './domain'
 import type { Plan } from './domain'
 import './App.css'
 
@@ -123,17 +123,20 @@ function ClientHome({ session, onLogout }: { session: Session; onLogout: () => v
   const [messages, setMessages] = useState<Message[]>([])
   const [billing, setBilling] = useState<BillingProfile | null>(null)
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([])
+  const [planChange, setPlanChange] = useState<PlanChangeRequest | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingConversations, setLoadingConversations] = useState(true)
 
   const refreshBilling = useCallback(async () => {
-    const [billingResponse, transactionResponse] = await Promise.all([
+    const [billingResponse, transactionResponse, planChangeResponse] = await Promise.all([
       api.billing(token),
       api.billingTransactions(token),
+      api.currentPlanChangeRequest(token).catch(nullWhenNotFound),
     ])
     setBilling(billingResponse)
     setTransactions(transactionResponse.items)
+    setPlanChange(planChangeResponse)
   }, [token])
 
   const loadMessages = useCallback(async (conversation: Conversation, silent = false) => {
@@ -163,10 +166,11 @@ function ClientHome({ session, onLogout }: { session: Session; onLogout: () => v
       .then(response => { setConversations(response.items); setError('') })
       .catch(reason => setError(reason instanceof Error ? reason.message : 'Erro inesperado.'))
       .finally(() => setLoadingConversations(false))
-    void Promise.all([api.billing(token), api.billingTransactions(token)])
-      .then(([billingResponse, transactionResponse]) => {
+    void Promise.all([api.billing(token), api.billingTransactions(token), api.currentPlanChangeRequest(token).catch(nullWhenNotFound)])
+      .then(([billingResponse, transactionResponse, planChangeResponse]) => {
         setBilling(billingResponse)
         setTransactions(transactionResponse.items)
+        setPlanChange(planChangeResponse)
       })
       .catch(reason => setError(reason instanceof Error ? reason.message : 'Erro inesperado.'))
   }, [token])
@@ -230,6 +234,37 @@ function ClientHome({ session, onLogout }: { session: Session; onLogout: () => v
     }
   }
 
+  async function requestPlanChange() {
+    if (!billing) return
+    const targetPlan = billing.planType === plans.prepaid ? plans.postpaid : plans.prepaid
+    setLoading(true)
+    setError('')
+    try {
+      const response = await api.createPlanChangeRequest(token, { targetPlan })
+      setPlanChange(response)
+      await refreshBilling()
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Erro inesperado.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function cancelPlanChange() {
+    if (!planChange || planChange.status !== planRequestStatuses.pending) return
+    setLoading(true)
+    setError('')
+    try {
+      await api.cancelPlanChangeRequest(token, planChange.id)
+      const response = await api.currentPlanChangeRequest(token).catch(nullWhenNotFound)
+      setPlanChange(response)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Erro inesperado.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <main className="dashboard">
       <header>
@@ -255,6 +290,26 @@ function ClientHome({ session, onLogout }: { session: Session; onLogout: () => v
                 : `${formatMoney(billing.postpaidConsumedCents)} / ${formatMoney(billing.postpaidTotalLimitCents)}`}
             </strong>
           </article>
+        </section>
+      )}
+      {billing && (
+        <section className="plan-change-panel">
+          <div>
+            <h2>Mudança de plano</h2>
+            <p>
+              {planChange
+                ? `Última solicitação: ${planLabel(planChange.fromPlan)} para ${planLabel(planChange.toPlan)} · ${planRequestStatusLabel(planChange.status)}`
+                : `Você pode solicitar troca para ${billing.planType === plans.prepaid ? 'pós-pago' : 'pré-pago'} quando não houver valor financeiro pendente.`}
+            </p>
+            {planChange?.rejectionReason && <small>Motivo: {planChange.rejectionReason}</small>}
+          </div>
+          {planChange?.status === planRequestStatuses.pending ? (
+            <button onClick={() => void cancelPlanChange()} disabled={loading}>Cancelar solicitação</button>
+          ) : (
+            <button className="primary" onClick={() => void requestPlanChange()} disabled={loading}>
+              Solicitar {billing.planType === plans.prepaid ? 'pós-pago' : 'pré-pago'}
+            </button>
+          )}
         </section>
       )}
       <section className="conversation-layout">
@@ -336,17 +391,27 @@ function ClientHome({ session, onLogout }: { session: Session; onLogout: () => v
 
 function AdminDashboard({ session, onLogout }: { session: Session; onLogout: () => void }) {
   const [clients, setClients] = useState<Client[]>([])
+  const [planRequests, setPlanRequests] = useState<PlanChangeRequest[]>([])
+  const [summary, setSummary] = useState<{ pendingClientActivations: number; pendingPlanChanges: number } | null>(null)
   const [error, setError] = useState('')
   const token = session.accessToken
 
   async function refresh() {
-    try { setClients((await api.clients(token)).items); setError('') }
+    try {
+      const [clientResponse, summaryResponse, requestResponse] = await Promise.all([
+        api.clients(token),
+        api.adminSummary(token),
+        api.adminPlanChangeRequests(token),
+      ])
+      setClients(clientResponse.items)
+      setSummary(summaryResponse)
+      setPlanRequests(requestResponse.items)
+      setError('')
+    }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Erro inesperado.') }
   }
   useEffect(() => {
-    void api.clients(token)
-      .then(response => { setClients(response.items); setError('') })
-      .catch(reason => setError(reason instanceof Error ? reason.message : 'Erro inesperado.'))
+    void refresh()
   }, [token])
 
   async function activate(client: Client) {
@@ -403,7 +468,65 @@ function AdminDashboard({ session, onLogout }: { session: Session; onLogout: () 
     }
   }
 
-  return <main className="dashboard"><header><div><span className="eyebrow">Administração</span><h1>Clientes</h1></div><button onClick={onLogout}>Sair</button></header>{error && <p className="error">{error}</p>}<section className="client-list">{clients.length === 0 ? <div className="empty-state"><h2>Nenhum cadastro</h2><p>Novas solicitações aparecerão aqui.</p></div> : clients.map(client => <article key={client.id} className="client-card"><div><span className={`pill ${client.status}`}>{client.status}</span><h2>{client.name}</h2><p>{client.documentType.toUpperCase()} · {client.documentId}</p><small>Plano solicitado: {client.requestedPlan === plans.prepaid ? 'Pré-pago' : 'Pós-pago'}</small></div><div className="actions">{client.status !== clientStatuses.active ? <><button className="primary" onClick={() => void activate(client)}>Ativar</button>{client.status === clientStatuses.pending && <button onClick={() => void reject(client)}>Rejeitar</button>}</> : <><button className="primary" onClick={() => client.requestedPlan === plans.prepaid ? void addCredit(client) : void setPostpaidLimit(client)}>{client.requestedPlan === plans.prepaid ? 'Adicionar crédito' : 'Ajustar limite'}</button><button onClick={() => void showTransactions(client)}>Histórico</button></>}</div></article>)}</section></main>
+  async function approvePlanChange(request: PlanChangeRequest) {
+    const amount = Number(prompt(request.toPlan === plans.prepaid ? 'Saldo inicial em centavos' : 'Limite total em centavos', '0'))
+    if (!Number.isSafeInteger(amount) || amount < 0) return
+    const body = request.toPlan === plans.prepaid
+      ? { initialBalanceCents: amount }
+      : { totalLimitCents: amount }
+    try {
+      await api.approvePlanChangeRequest(token, request.id, body)
+      await refresh()
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Erro inesperado.')
+    }
+  }
+
+  async function rejectPlanChange(request: PlanChangeRequest) {
+    const reason = prompt('Motivo da rejeição')?.trim()
+    if (!reason) return
+    try {
+      await api.rejectPlanChangeRequest(token, request.id, reason)
+      await refresh()
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Erro inesperado.')
+    }
+  }
+
+  return (
+    <main className="dashboard">
+      <header><div><span className="eyebrow">Administração</span><h1>Clientes</h1></div><button onClick={onLogout}>Sair</button></header>
+      {error && <p className="error">{error}</p>}
+      {summary && (
+        <section className="summary-grid">
+          <article className="metric-card"><span>Cadastros pendentes</span><strong>{summary.pendingClientActivations}</strong></article>
+          <article className="metric-card"><span>Mudanças de plano</span><strong>{summary.pendingPlanChanges}</strong></article>
+        </section>
+      )}
+      <section className="admin-section">
+        <h2>Solicitações de mudança de plano</h2>
+        {planRequests.length === 0 ? (
+          <p className="muted">Nenhuma solicitação pendente.</p>
+        ) : planRequests.map(request => (
+          <article key={request.id} className="client-card">
+            <div>
+              <span className={`pill ${request.status}`}>{planRequestStatusLabel(request.status)}</span>
+              <h2>{request.clientName || request.clientId}</h2>
+              <p>{planLabel(request.fromPlan)} para {planLabel(request.toPlan)}</p>
+              <small>Solicitada em {new Date(request.createdAt).toLocaleString('pt-BR')}</small>
+            </div>
+            <div className="actions">
+              <button className="primary" onClick={() => void approvePlanChange(request)}>Aprovar</button>
+              <button onClick={() => void rejectPlanChange(request)}>Rejeitar</button>
+            </div>
+          </article>
+        ))}
+      </section>
+      <section className="client-list">
+        {clients.length === 0 ? <div className="empty-state"><h2>Nenhum cadastro</h2><p>Novas solicitações aparecerão aqui.</p></div> : clients.map(client => <article key={client.id} className="client-card"><div><span className={`pill ${client.status}`}>{client.status}</span><h2>{client.name}</h2><p>{client.documentType.toUpperCase()} · {client.documentId}</p><small>Plano solicitado: {client.requestedPlan === plans.prepaid ? 'Pré-pago' : 'Pós-pago'}</small></div><div className="actions">{client.status !== clientStatuses.active ? <><button className="primary" onClick={() => void activate(client)}>Ativar</button>{client.status === clientStatuses.pending && <button onClick={() => void reject(client)}>Rejeitar</button>}</> : <><button className="primary" onClick={() => client.requestedPlan === plans.prepaid ? void addCredit(client) : void setPostpaidLimit(client)}>{client.requestedPlan === plans.prepaid ? 'Adicionar crédito' : 'Ajustar limite'}</button><button onClick={() => void showTransactions(client)}>Histórico</button></>}</div></article>)}
+      </section>
+    </main>
+  )
 }
 
 function formatMoney(cents: number) {
@@ -421,6 +544,20 @@ function transactionLabel(type: FinancialTransaction['type']) {
   return labels[type]
 }
 
+function planLabel(plan: Plan) {
+  return plan === plans.prepaid ? 'Pré-pago' : 'Pós-pago'
+}
+
+function planRequestStatusLabel(status: PlanChangeRequest['status']) {
+  const labels: Record<PlanChangeRequest['status'], string> = {
+    [planRequestStatuses.pending]: 'Pendente',
+    [planRequestStatuses.approved]: 'Aprovada',
+    [planRequestStatuses.rejected]: 'Rejeitada',
+    [planRequestStatuses.cancelled]: 'Cancelada',
+  }
+  return labels[status]
+}
+
 function messageStatusLabel(status: Message['status']) {
   const labels: Record<Message['status'], string> = {
     [messageStatuses.queued]: 'Na fila',
@@ -433,6 +570,11 @@ function messageStatusLabel(status: Message['status']) {
 
 function idempotencyKey() {
   return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`
+}
+
+function nullWhenNotFound(reason: unknown) {
+  if (reason instanceof APIRequestError && reason.status === 404) return null
+  throw reason
 }
 
 export default App

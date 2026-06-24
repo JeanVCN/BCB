@@ -62,6 +62,15 @@ const (
 	DispatchJobFailed     DispatchJobState = "failed"
 )
 
+type PlanChangeRequestStatus string
+
+const (
+	PlanChangeRequestPending   PlanChangeRequestStatus = "pending"
+	PlanChangeRequestApproved  PlanChangeRequestStatus = "approved"
+	PlanChangeRequestRejected  PlanChangeRequestStatus = "rejected"
+	PlanChangeRequestCancelled PlanChangeRequestStatus = "cancelled"
+)
+
 type FinancialTransactionType string
 
 const (
