@@ -2,148 +2,303 @@
 
 # Big Chat Brasil
 
-### Comunicação empresarial com controle financeiro e processamento confiável
+### Aplicação fullstack de chat empresarial com cobrança por mensagem
 
-![Status](https://img.shields.io/badge/status-fluxo%20principal%20integrado-16a34a)
-![Backend](https://img.shields.io/badge/backend-Go%20%2B%20Gin-00ADD8)
-![Frontend](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
-![Database](https://img.shields.io/badge/database-PostgreSQL-4169E1)
+![Go](https://img.shields.io/badge/backend-Go%20%2B%20Gin-00ADD8)
+![React](https://img.shields.io/badge/frontend-React%20%2B%20TypeScript-3178C6)
+![PostgreSQL](https://img.shields.io/badge/database-PostgreSQL-4169E1)
+![Docker](https://img.shields.io/badge/run-Docker%20Compose-2496ED)
 
 </div>
 
-## Sobre o projeto
+## Sobre
 
-O **Big Chat Brasil (BCB)** é uma aplicação Fullstack de chat para empresas se
-comunicarem com seus clientes finais. Além da experiência de conversa, o produto
-combina planos pré e pós-pagos, mensagens normais e urgentes, processamento em
-fila e rastreabilidade financeira.
+O **Big Chat Brasil (BCB)** é a solução para o desafio técnico Fullstack: uma
+plataforma de chat onde empresas conversam com clientes finais, enviam mensagens
+SMS ou WhatsApp simuladas, acompanham status de processamento e controlam custos
+em planos pré-pago ou pós-pago.
 
-Este repositório faz parte de um desafio técnico e foi planejado para demonstrar
-não apenas o funcionamento do produto, mas também decisões conscientes sobre
-consistência, concorrência, integração e evolução arquitetural.
+A entrega implementa backend real, frontend integrado e execução completa com
+Docker Compose. O foco principal está no fluxo fullstack solicitado:
 
-> **Estado atual:** ambiente executável com frontend, API, PostgreSQL e Redis,
-> autocadastro, autenticação, ativação administrativa, RBAC inicial, conversas
-> financeiro, envio simulado com cobrança, fila persistente, worker dedicado,
-> retry, estorno, mudança de plano e readiness real das dependências.
+```text
+cadastro/login -> conversas -> envio de mensagem -> fila/worker -> status -> financeiro
+```
 
-## Experiência planejada
+## Funcionalidades
 
-- Autocadastro de empresas por CPF ou CNPJ, com ativação administrativa.
-- Autenticação segura e controle de acesso por papéis.
-- Planos pré-pago e pós-pago com histórico financeiro auditável.
-- Cadastro de destinatários e organização por conversas.
-- Mensagens SMS ou WhatsApp simuladas, normais ou urgentes.
-- Fila persistente com worker, prioridade, retry e estorno idempotente.
-- Solicitação e aprovação administrativa de mudança de plano.
-- Interface responsiva com estados de carregamento, erro e sucesso.
-
-O desafio não exige integração com provedores reais de SMS ou WhatsApp. O
-disparo será simulado, preservando todo o fluxo interno de validação, cobrança,
-enfileiramento, processamento e atualização de status.
+- Autocadastro de empresa cliente por CPF ou CNPJ.
+- Aprovação administrativa antes do primeiro acesso do cliente.
+- Autenticação com senha, JWT e limitação de tentativas de login.
+- Controle de acesso com papéis `admin` e `client`.
+- Cadastro/listagem de conversas com destinatário e telefone E.164.
+- Envio de mensagens SMS ou WhatsApp com prioridade normal ou urgente.
+- Custos por mensagem:
+  - Normal: R$ 0,25.
+  - Urgente: R$ 0,50.
+- Planos:
+  - Pré-pago: exige saldo antes de enviar.
+  - Pós-pago: exige limite disponível.
+- Fila persistente em PostgreSQL com worker separado.
+- Priorização: mensagens urgentes antes de normais, preservando FIFO por
+  prioridade.
+- Status de mensagem: `queued`, `processing`, `sent` e `failed`.
+- Retry de falhas transitórias e estorno idempotente em falhas definitivas.
+- Histórico financeiro para cliente e administrador.
+- Crédito pré-pago e ajuste de limite pós-pago por administrador.
+- Solicitação de mudança de plano pelo cliente e aprovação/rejeição pelo admin.
+- Interface responsiva com estados de carregamento, vazio, erro e sucesso.
 
 ## Tecnologias
 
-| Camada | Tecnologia | Estado atual |
-|---|---|---|
-| Backend | Go 1.25+ e Gin 1.12 | Auth, RBAC, conversas, financeiro, mensagens, worker dedicado, mudança de plano e health checks |
-| Frontend | React 19.2, TypeScript 6 e Vite 8 | Onboarding, login, admin básico, conversas, financeiro, envio e mudança de plano |
-| Persistência | PostgreSQL 17 | Integrado ao backend via migrations |
-| Coordenação | Redis 8 | Rate limit de login e lock financeiro |
-| Ambiente | Docker Compose | Serviços integrados e validados |
-| Evolução opcional | RabbitMQ | Ainda fora do escopo implementado |
-
-## Decisões que orientam a solução
-
-- Valores monetários serão representados em centavos, sem ponto flutuante.
-- PostgreSQL será a garantia final de consistência transacional.
-- Redis complementará o banco na coordenação de instâncias concorrentes.
-- Operações financeiras, retries e estornos serão idempotentes.
-- Mensagens urgentes terão precedência, preservando FIFO na mesma prioridade.
-- A fila inicial manterá uma fronteira preparada para futura adoção do
-  RabbitMQ.
-- O fluxo completo e integrado tem prioridade sobre funcionalidades opcionais.
-
-## Documentação do projeto
-
-| Documento | Conteúdo |
+| Camada | Escolha |
 |---|---|
-| [Decisões de produto](project-docs/product-decisions.md) | Escopo, justificativas e histórico de decisões |
-| [Critérios de aceite](project-docs/acceptance-criteria.md) | Comportamentos verificáveis e definição de pronto |
-| [Modelo conceitual](project-docs/domain-model.md) | Entidades, invariantes, estados e autorização |
-| [Contratos HTTP](project-docs/api-contracts.md) | API v1 e integração entre frontend e backend |
-| [Fundação técnica](project-docs/technical-foundation.md) | Organização, runtimes e limites da etapa atual |
+| Backend | Go 1.25+ com Gin |
+| Frontend | React 19, TypeScript 6 e Vite 8 |
+| Banco de dados | PostgreSQL 17 |
+| Coordenação | Redis 8 para rate limit e lock financeiro |
+| Infraestrutura local | Docker Compose |
+| Servidor frontend | Nginx servindo build estático e proxy da API |
 
-## Roadmap
+## Premissas
 
-- [x] Levantamento e consolidação dos requisitos.
-- [x] Decisões de produto e regras de negócio.
-- [x] Critérios de aceite.
-- [x] Modelo conceitual e contratos HTTP v1.
-- [x] Ambiente Docker com PostgreSQL e Redis.
-- [x] Cadastro, ativação, RBAC e autenticação.
-- [x] Conversas e histórico inicial.
-- [x] Planos e administração financeira básica.
-- [x] Envio, fila, worker, retry e estorno.
-- [x] Solicitação e aprovação administrativa de mudança de plano.
-- [ ] Frontend responsivo e fluxo integrado.
-- [ ] Testes, documentação final e preparação da entrega.
+- O envio real por SMS/WhatsApp não é necessário no desafio. O sistema simula o
+  disparo e atualiza status.
+- O cliente final/destinatário possui nome e telefone.
+- O cliente da plataforma é a empresa contratante, identificada por CPF ou CNPJ.
+- Valores financeiros são armazenados em centavos, sem ponto flutuante.
+- O primeiro administrador é criado por comando local, sem endpoint público.
+- A API aplica migrations automaticamente no ambiente Docker por padrão.
+- `docs/` contém os documentos oficiais recebidos para o desafio e não é
+  alterado pela implementação.
 
-## Execução
+## Como executar
 
-Requisitos: Docker com suporte ao Compose.
+### 1. Requisitos
+
+- Docker.
+- Docker Compose v2 (`docker compose`).
+- Portas livres por padrão:
+  - Frontend: `3000`.
+  - Backend: `8080`.
+  - PostgreSQL: `5432`.
+  - Redis: `6379`.
+
+### 2. Configurar ambiente
 
 ```bash
 cp .env.example .env
+```
+
+O arquivo `.env.example` já possui valores de desenvolvimento suficientes para
+subir a aplicação. Para uma avaliação local, você pode manter os defaults.
+
+Se alguma porta estiver ocupada, altere no `.env`:
+
+```env
+POSTGRES_PORT=15432
+REDIS_PORT=16379
+BACKEND_PORT=18080
+FRONTEND_PORT=13000
+```
+
+### 3. Subir os serviços
+
+```bash
 docker compose up --build
 ```
 
-Após os health checks:
+Serviços iniciados:
+
+- `postgres`: banco de dados principal.
+- `redis`: rate limit e lock financeiro.
+- `backend`: API Go/Gin.
+- `message-worker`: processamento assíncrono da fila.
+- `frontend`: aplicação React servida por Nginx.
+
+### 4. Acessar
+
+Com portas padrão:
 
 - Frontend: `http://localhost:3000`
 - Backend: `http://localhost:8080`
 - Liveness: `http://localhost:8080/health/live`
 - Readiness: `http://localhost:8080/health/ready`
 
-Para criar o primeiro administrador, ajuste `ADMIN_LOGIN` e `ADMIN_PASSWORD` no
-`.env` e execute:
+Com as portas alternativas do exemplo:
+
+- Frontend: `http://localhost:13000`
+- Backend: `http://localhost:18080`
+- Liveness: `http://localhost:18080/health/live`
+- Readiness: `http://localhost:18080/health/ready`
+
+### 5. Criar o primeiro administrador
+
+Em outro terminal, execute:
 
 ```bash
 docker compose run --rm backend /app/admin-bootstrap
 ```
 
-O comando é idempotente: se o login administrativo já existir, ele não cria uma
-segunda identidade.
+Credenciais padrão do `.env.example`:
 
-Por padrão, a API aplica migrations na inicialização para simplificar a
-avaliação local. Se quiser controlar migrations separadamente, defina
-`RUN_MIGRATIONS=false`.
+```text
+login: admin
+senha: ChangeThisAdminPassword123!
+```
 
-As portas podem ser alteradas no arquivo `.env` caso já estejam ocupadas. Para
-encerrar o ambiente:
+O comando é idempotente. Rodar novamente não duplica o administrador.
+
+### 6. Parar ou limpar o ambiente
+
+Parar containers preservando dados:
 
 ```bash
 docker compose down
 ```
 
-Os volumes do PostgreSQL e Redis são preservados por padrão.
+Parar containers e apagar volumes do PostgreSQL/Redis:
 
-## Verificações locais
+```bash
+docker compose down -v
+```
+
+## Roteiro de teste pela interface
+
+1. Acesse o frontend.
+2. Crie uma conta de empresa cliente com CPF ou CNPJ válido.
+3. Faça login como `admin`.
+4. Ative o cliente recém-cadastrado:
+   - Para pré-pago, informe saldo inicial em centavos. Exemplo: `1000`.
+   - Para pós-pago, informe limite em centavos. Exemplo: `5000`.
+5. Saia e faça login como cliente usando o documento cadastrado e a senha.
+6. Crie uma conversa com telefone em formato E.164. Exemplo:
+
+```text
++5511999999999
+```
+
+7. Envie uma mensagem normal ou urgente.
+8. Acompanhe a troca de status até `sent` ou `failed`.
+9. Consulte o resumo e o histórico financeiro.
+10. Para simular cenários do worker:
+    - Mensagem comum tende a sucesso.
+    - Conteúdo com `[fail]` força falha permanente.
+    - Conteúdo com `[retry]` força falhas transitórias até esgotar retries e
+      acionar estorno.
+11. Para testar mudança de plano:
+    - Pré-pago só solicita mudança com saldo igual a zero.
+    - Pós-pago só solicita mudança com consumo igual a zero.
+    - O admin aprova ou rejeita pelo painel administrativo.
+
+## Verificações por terminal
+
+### Health checks
+
+```bash
+curl http://localhost:8080/health/live
+curl http://localhost:8080/health/ready
+```
+
+Resposta esperada:
+
+```json
+{"status":"ok"}
+```
+
+```json
+{"status":"ready"}
+```
+
+### Testes e build locais
+
+Backend:
 
 ```bash
 cd backend
 go test ./...
+```
 
-cd ../frontend
+Frontend:
+
+```bash
+cd frontend
 npm install
 npm run lint
 npm run build
 ```
 
-## Princípios de entrega
+## Estrutura do projeto
 
-- Qualidade e clareza antes de quantidade de funcionalidades.
-- Regras de negócio protegidas por testes proporcionais ao risco.
-- Commits pequenos, coerentes e explicáveis durante a apresentação.
-- Documentação atualizada junto com o comportamento real da aplicação.
-- Limitações e trabalhos futuros descritos de maneira transparente.
+```text
+.
+├── backend/                  # API Go, migrations e worker
+│   ├── cmd/api               # Entrada HTTP
+│   ├── cmd/admin-bootstrap   # Criação do primeiro admin
+│   ├── cmd/message-worker    # Worker da fila
+│   └── internal/modules      # Domínios da aplicação
+├── frontend/                 # React + TypeScript + Vite
+├── project-docs/             # Decisões, contratos e modelo autoral
+├── ai-memory/                # Memória operacional para IA
+├── docs/                     # Documentação oficial recebida do desafio
+├── compose.yaml              # Orquestração Docker Compose
+└── .env.example              # Variáveis de ambiente de desenvolvimento
+```
+
+## Endpoints principais
+
+| Método | Rota | Uso |
+|---|---|---|
+| `POST` | `/api/v1/auth/register` | Autocadastro da empresa |
+| `POST` | `/api/v1/auth/login` | Login admin ou cliente |
+| `GET` | `/api/v1/me` | Sessão atual |
+| `GET` | `/api/v1/conversations` | Listar conversas do cliente |
+| `POST` | `/api/v1/conversations` | Criar conversa/destinatário |
+| `GET` | `/api/v1/conversations/{id}/messages` | Histórico da conversa |
+| `POST` | `/api/v1/conversations/{id}/messages` | Enviar mensagem |
+| `GET` | `/api/v1/billing` | Resumo financeiro do cliente |
+| `GET` | `/api/v1/billing/transactions` | Histórico financeiro |
+| `POST` | `/api/v1/plan-change-requests` | Solicitar mudança de plano |
+| `GET` | `/api/v1/admin/clients` | Listar clientes para admin |
+| `POST` | `/api/v1/admin/clients/{id}/activate` | Ativar cliente |
+| `POST` | `/api/v1/admin/clients/{id}/credits` | Adicionar crédito |
+| `PUT` | `/api/v1/admin/clients/{id}/postpaid-limit` | Ajustar limite pós-pago |
+| `GET` | `/api/v1/admin/plan-change-requests` | Listar mudanças de plano |
+
+Envio de mensagem e mutações financeiras administrativas usam
+`Idempotency-Key`.
+
+## Decisões técnicas
+
+- **Go + Gin**: stack simples, rápida e adequada para APIs HTTP.
+- **PostgreSQL**: garante consistência transacional para cobrança, fila,
+  auditoria e histórico financeiro.
+- **Redis**: protege operações sensíveis contra concorrência entre instâncias.
+- **Worker separado**: evita acoplar processamento de mensagens ao ciclo de
+  vida do servidor HTTP.
+- **Fila em banco**: mantém persistência e permite evolução futura para
+  RabbitMQ sem mudar o domínio.
+- **JWT com expiração curta**: autenticação stateless suficiente para o desafio.
+- **Argon2id**: armazenamento seguro de senhas com hash resistente e salt.
+
+## Limitações conhecidas
+
+- Não há integração real com provedores de SMS ou WhatsApp.
+- Não há mensagens inbound de provedor externo.
+- Estados `delivered` e `read` ficaram fora do escopo inicial.
+- Não há reset mensal automático do consumo pós-pago.
+- Não há paginação avançada ou busca textual nas listas.
+- Não há Swagger/OpenAPI nesta versão.
+
+## Documentação complementar
+
+Este README foi escrito a partir dos documentos oficiais recebidos para o
+desafio, mantidos localmente em `docs/`. Essa pasta não faz parte da
+documentação autoral do projeto.
+
+- [Decisões de produto](project-docs/product-decisions.md)
+- [Critérios de aceite](project-docs/acceptance-criteria.md)
+- [Modelo conceitual](project-docs/domain-model.md)
+- [Contratos HTTP](project-docs/api-contracts.md)
+- [Fundação técnica](project-docs/technical-foundation.md)
+- [Histórico de implementação](HISTORICO_IMPLEMENTACAO.md)

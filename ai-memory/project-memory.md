@@ -123,6 +123,12 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
   escopo deste projeto.
 - A memória para IA e a documentação do projeto devem permanecer separadas do
   README e dos documentos oficiais.
+- O README principal deve funcionar como documento público de entrega do
+  desafio: descrição, premissas, tecnologias, execução, testes, funcionalidades,
+  limitações e links relevantes.
+- O histórico de fases, correções e evolução incremental deve ficar separado em
+  `HISTORICO_IMPLEMENTACAO.md`, preservando o README antigo como registro
+  consultável sem poluir a apresentação principal.
 
 ### Contas, cadastro e segurança
 
@@ -304,6 +310,9 @@ Somente depois do essencial estar estável, avaliar:
   limitações vigentes e o estado atual do roadmap.
 - Nunca apresentar no README uma tecnologia planejada como implementada nem
   publicar instruções de execução que ainda não foram validadas.
+- A partir de 2026-06-24, detalhes históricos extensos ficam em
+  `HISTORICO_IMPLEMENTACAO.md`; o README principal deve responder diretamente
+  ao que os documentos oficiais em `docs/` pedem para avaliação.
 
 ## Implementação atual
 
@@ -395,13 +404,25 @@ Somente depois do essencial estar estável, avaliar:
   do módulo `billing`: como o router já monta o grupo `/admin`, as rotas agora
   são registradas como `/clients/...`, preservando o contrato público
   `/api/v1/admin/clients/...`.
+- Em 2026-06-24 foi validado o fluxo E2E em Docker com portas locais
+  alternativas em `.env` ignorado pelo Git: frontend `13000`, backend `18080`,
+  PostgreSQL `15432` e Redis `16379`. O teste cobriu cadastro, ativação, login,
+  conversa, envio com sucesso, `[fail]`, `[retry]`, estornos, saldo zerado,
+  solicitação/aprovação de mudança de plano, restart do Compose e persistência
+  de login, billing, conversa e mensagens.
+- A busca nos logs do Compose por senha, token, bearer, authorization, JWT,
+  secret e hash não encontrou exposição sensível no fluxo validado. Os logs do
+  backend ainda registram método, rota e IDs na URL pelo `gin.Logger`, o que é
+  aceitável para o escopo atual por não incluir corpo, senha ou token.
+- O frontend passou por ajuste responsivo em CSS, removendo escala
+  tipográfica por viewport, letter-spacing negativo e riscos de overflow em
+  IDs, telefones, mensagens e ações administrativas.
 
 ## Pendências abertas
 
 Não há pendência funcional bloqueante para finalizar o fluxo mínimo integrado.
 As próximas melhorias naturais são polimento do fluxo ponta a ponta, testes
-mais específicos, persistência após reinício validada no Docker, responsividade
-e revisão de segurança operacional de logs/erros.
+mais específicos, revisão de erros internos e preparação final de entrega.
 
 ## Onboarding e RBAC aprovados
 

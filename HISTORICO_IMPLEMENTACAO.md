@@ -1,0 +1,156 @@
+# Histórico de implementação
+
+Este documento preserva a evolução do projeto, fases implementadas e decisões
+operacionais registradas ao longo do desenvolvimento. O README principal foi
+reescrito para servir como documentação direta de entrega do desafio técnico.
+
+# Big Chat Brasil
+
+## Sobre o projeto
+
+O **Big Chat Brasil (BCB)** é uma aplicação Fullstack de chat para empresas se
+comunicarem com seus clientes finais. Além da experiência de conversa, o produto
+combina planos pré e pós-pagos, mensagens normais e urgentes, processamento em
+fila e rastreabilidade financeira.
+
+Este repositório faz parte de um desafio técnico e foi planejado para demonstrar
+não apenas o funcionamento do produto, mas também decisões conscientes sobre
+consistência, concorrência, integração e evolução arquitetural.
+
+> **Estado atual:** ambiente executável com frontend, API, PostgreSQL e Redis,
+> autocadastro, autenticação, ativação administrativa, RBAC inicial, conversas
+> financeiro, envio simulado com cobrança, fila persistente, worker dedicado,
+> retry, estorno, mudança de plano e readiness real das dependências.
+> O fluxo principal foi validado em Docker com restart dos serviços e
+> persistência dos dados no PostgreSQL.
+
+## Experiência planejada
+
+- Autocadastro de empresas por CPF ou CNPJ, com ativação administrativa.
+- Autenticação segura e controle de acesso por papéis.
+- Planos pré-pago e pós-pago com histórico financeiro auditável.
+- Cadastro de destinatários e organização por conversas.
+- Mensagens SMS ou WhatsApp simuladas, normais ou urgentes.
+- Fila persistente com worker, prioridade, retry e estorno idempotente.
+- Solicitação e aprovação administrativa de mudança de plano.
+- Interface responsiva com estados de carregamento, erro e sucesso.
+
+O desafio não exige integração com provedores reais de SMS ou WhatsApp. O
+disparo será simulado, preservando todo o fluxo interno de validação, cobrança,
+enfileiramento, processamento e atualização de status.
+
+## Tecnologias
+
+| Camada | Tecnologia | Estado atual |
+|---|---|---|
+| Backend | Go 1.25+ e Gin 1.12 | Auth, RBAC, conversas, financeiro, mensagens, worker dedicado, mudança de plano e health checks |
+| Frontend | React 19.2, TypeScript 6 e Vite 8 | Onboarding, login, admin básico, conversas, financeiro, envio e mudança de plano |
+| Persistência | PostgreSQL 17 | Integrado ao backend via migrations |
+| Coordenação | Redis 8 | Rate limit de login e lock financeiro |
+| Ambiente | Docker Compose | Serviços integrados e validados |
+| Evolução opcional | RabbitMQ | Ainda fora do escopo implementado |
+
+## Decisões que orientam a solução
+
+- Valores monetários serão representados em centavos, sem ponto flutuante.
+- PostgreSQL será a garantia final de consistência transacional.
+- Redis complementará o banco na coordenação de instâncias concorrentes.
+- Operações financeiras, retries e estornos serão idempotentes.
+- Mensagens urgentes terão precedência, preservando FIFO na mesma prioridade.
+- A fila inicial manterá uma fronteira preparada para futura adoção do
+  RabbitMQ.
+- O fluxo completo e integrado tem prioridade sobre funcionalidades opcionais.
+
+## Documentação do projeto
+
+| Documento | Conteúdo |
+|---|---|
+| [Decisões de produto](project-docs/product-decisions.md) | Escopo, justificativas e histórico de decisões |
+| [Critérios de aceite](project-docs/acceptance-criteria.md) | Comportamentos verificáveis e definição de pronto |
+| [Modelo conceitual](project-docs/domain-model.md) | Entidades, invariantes, estados e autorização |
+| [Contratos HTTP](project-docs/api-contracts.md) | API v1 e integração entre frontend e backend |
+| [Fundação técnica](project-docs/technical-foundation.md) | Organização, runtimes e limites da etapa atual |
+
+## Roadmap
+
+- [x] Levantamento e consolidação dos requisitos.
+- [x] Decisões de produto e regras de negócio.
+- [x] Critérios de aceite.
+- [x] Modelo conceitual e contratos HTTP v1.
+- [x] Ambiente Docker com PostgreSQL e Redis.
+- [x] Cadastro, ativação, RBAC e autenticação.
+- [x] Conversas e histórico inicial.
+- [x] Planos e administração financeira básica.
+- [x] Envio, fila, worker, retry e estorno.
+- [x] Solicitação e aprovação administrativa de mudança de plano.
+- [x] Frontend responsivo e fluxo integrado.
+- [ ] Testes, documentação final e preparação da entrega.
+
+## Execução
+
+Requisitos: Docker com suporte ao Compose.
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Após os health checks:
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8080`
+- Liveness: `http://localhost:8080/health/live`
+- Readiness: `http://localhost:8080/health/ready`
+
+Para criar o primeiro administrador, ajuste `ADMIN_LOGIN` e `ADMIN_PASSWORD` no
+`.env` e execute:
+
+```bash
+docker compose run --rm backend /app/admin-bootstrap
+```
+
+O comando é idempotente: se o login administrativo já existir, ele não cria uma
+segunda identidade.
+
+Por padrão, a API aplica migrations na inicialização para simplificar a
+avaliação local. Se quiser controlar migrations separadamente, defina
+`RUN_MIGRATIONS=false`.
+
+As portas podem ser alteradas no arquivo `.env` caso já estejam ocupadas. Para
+encerrar o ambiente:
+
+Exemplo de portas alternativas usadas na validação local quando `5432`, `6379`,
+`8080` ou `3000` já estavam ocupadas:
+
+```env
+POSTGRES_PORT=15432
+REDIS_PORT=16379
+BACKEND_PORT=18080
+FRONTEND_PORT=13000
+```
+
+```bash
+docker compose down
+```
+
+Os volumes do PostgreSQL e Redis são preservados por padrão.
+
+## Verificações locais
+
+```bash
+cd backend
+go test ./...
+
+cd ../frontend
+npm install
+npm run lint
+npm run build
+```
+
+## Princípios de entrega
+
+- Qualidade e clareza antes de quantidade de funcionalidades.
+- Regras de negócio protegidas por testes proporcionais ao risco.
+- Commits pequenos, coerentes e explicáveis durante a apresentação.
+- Documentação atualizada junto com o comportamento real da aplicação.
+- Limitações e trabalhos futuros descritos de maneira transparente.

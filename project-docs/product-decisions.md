@@ -46,7 +46,8 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Cadastro rejeitado | Preservado e reconsiderável, sem duplicar documento | Manter auditoria e unicidade |
 | Sessão | Token de uma hora, sem renovação automática | Manter segurança e escopo inicial simples |
 | Ordem da fila | Urgente antes de normal; FIFO dentro da prioridade | Cumprir prioridade sem perder previsibilidade |
-| README evolutivo | Atualizar em cada commit relevante e distinguir planejado de entregue | Manter a apresentação confiável durante toda a construção |
+| README de entrega | Manter o README principal focado no que o desafio pede: descrição, premissas, tecnologias, execução, testes, funcionalidades, limitações e links | Facilitar avaliação e uso do projeto sem misturar histórico interno |
+| Histórico de implementação | Preservar fases, correções e evolução incremental em `HISTORICO_IMPLEMENTACAO.md` | Manter rastreabilidade sem poluir a documentação pública principal |
 | Organização inicial | Monorepo com backend, frontend e infraestrutura na raiz | Facilitar integração e execução do desafio |
 | Runtime HTTP | Timeouts, logs estruturados e shutdown gracioso | Partir de um servidor previsível e operável |
 | Health checks | Liveness do processo e readiness de PostgreSQL/Redis | Separar processo vivo de dependências essenciais disponíveis |
@@ -334,3 +335,11 @@ Não há definição funcional bloqueante para iniciar a implementação.
   de microarquivos.
 - Definido que enumerações de domínio devem ser comparadas por constantes/tipos
   compartilhados, não por strings soltas espalhadas pelo projeto.
+
+### 2026-06-24
+
+- Separado o antigo README em `HISTORICO_IMPLEMENTACAO.md`, preservando
+  histórico de fases, correções e validações realizadas.
+- Reescrito o README principal como documento de entrega do desafio,
+  concentrando descrição, premissas, tecnologias, execução, roteiro de teste,
+  endpoints principais, decisões técnicas, limitações e links úteis.
