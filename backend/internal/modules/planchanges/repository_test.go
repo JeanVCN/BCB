@@ -7,7 +7,7 @@ import (
 	"bcb/backend/internal/domain"
 )
 
-func TestBillingSnapshotCanChange(t *testing.T) {
+func TestBillingSnapshotCanApprovePlanChange(t *testing.T) {
 	tests := []struct {
 		name     string
 		snapshot billingSnapshot
@@ -49,8 +49,8 @@ func TestBillingSnapshotCanChange(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if got := test.snapshot.canChange(); got != test.want {
-				t.Fatalf("canChange() = %v, want %v", got, test.want)
+			if got := test.snapshot.canApprovePlanChange(); got != test.want {
+				t.Fatalf("canApprovePlanChange() = %v, want %v", got, test.want)
 			}
 		})
 	}

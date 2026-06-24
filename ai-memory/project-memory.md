@@ -132,6 +132,9 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
 - O README principal deve funcionar como documento público de entrega do
   desafio: descrição, premissas, tecnologias, execução, testes, funcionalidades,
   limitações e links relevantes.
+- A documentação OpenAPI 3.0 da API deve ficar em
+  `project-docs/openapi.yaml` e ser referenciada no README como contrato
+  navegável complementar ao `project-docs/api-contracts.md`.
 - O histórico de fases, correções e evolução incremental deve ficar separado em
   `HISTORICO_IMPLEMENTACAO.md`, preservando o README antigo como registro
   consultável sem poluir a apresentação principal.
@@ -231,10 +234,10 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
   decorrer do período de cobrança.
 - Administração financeira integra o escopo: créditos, limites, consultas,
   conversão de plano e histórico de transações.
-- A conversão de plano somente pode ser efetivada quando não existir valor
-  financeiro pendente: saldo pré-pago igual a zero ou consumo pós-pago igual a
-  zero, conforme o plano atual.
-- O cliente pode solicitar uma mudança de plano quando satisfizer essa condição.
+- O cliente pode solicitar uma mudança de plano mesmo quando existir valor
+  financeiro pendente. A conversão só pode ser aprovada pelo administrador
+  quando não existir valor financeiro pendente: saldo pré-pago igual a zero ou
+  consumo pós-pago igual a zero, conforme o plano atual.
 - Cada cliente pode manter apenas uma solicitação de mudança pendente.
 - A solicitação possui os estados `pending`, `approved`, `rejected` e
   `cancelled`.
@@ -243,8 +246,8 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
   notificação interna, por contador e lista no painel administrativo.
 - Não haverá inicialmente notificação por e-mail, push, WebSocket ou outro
   canal externo.
-- A aprovação deve revalidar saldo/consumo e permissão no momento da operação,
-  pois a situação pode ter mudado desde a solicitação.
+- A aprovação deve revalidar saldo/consumo zerado e permissão no momento da
+  operação, pois a situação pode ter mudado desde a solicitação.
 - Solicitação, cancelamento, aprovação e rejeição devem ser auditáveis.
 - Estorno em caso de falha faz parte do escopo essencial.
 - O estorno ocorre somente depois de esgotadas as tentativas configuradas e a
@@ -257,7 +260,7 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
 - O financeiro administrativo básico foi implementado antes do envio de
   mensagens: cliente consulta resumo e histórico; administrador adiciona
   crédito pré-pago, ajusta limite pós-pago e zera saldo pré-pago ou consumo
-  pós-pago para permitir que o cliente solicite mudança de plano quando
+  pós-pago para permitir que o administrador aprove mudança de plano quando
   necessário.
 - Mutações financeiras administrativas exigem `Idempotency-Key`. A repetição
   da mesma chave com o mesmo corpo não reaplica o efeito; a mesma chave com
@@ -437,6 +440,26 @@ Somente depois do essencial estar estável, avaliar:
   dashboard administrativo, área do cliente, chat, métricas, histórico,
   modais, notificações, layout, tipos de UI e utilitários passaram a ficar em
   módulos próprios sem criar uma arquitetura excessivamente complexa.
+- Em 2026-06-24, por solicitação do responsável do projeto, a navegação do
+  frontend deixou de usar atalhos por rolagem entre seções empilhadas e passou
+  a separar áreas por estado de tela: dashboard, conversas e financeiro para
+  cliente; dashboard, solicitações e clientes para administrador. O chat deve
+  funcionar como workspace central, com lista de conversas, histórico
+  scrollável próprio e compositor sempre acessível, inclusive em mobile.
+- Em 2026-06-24, por solicitação do responsável do projeto, usuários `client`
+  passam a entrar inicialmente na área de conversas, reforçando o chat como
+  funcionalidade principal. A topbar do cliente deve exibir o valor disponível
+  do plano vigente, e o cadastro de destinatário deve usar máscara visual de
+  telefone brasileiro no formato fictício `+55 (55) 5555-5555`, mantendo a normalização
+  E.164 no backend.
+- Em 2026-06-24, por solicitação do responsável do projeto, a regra de mudança
+  de plano foi ajustada: o cliente pode solicitar troca mesmo com saldo
+  pré-pago ou consumo pós-pago pendente; o administrador só pode aprovar depois
+  de zerar a pendência financeira correspondente.
+- Em 2026-06-24, por solicitação do responsável do projeto, foi adicionada
+  documentação OpenAPI 3.0 em `project-docs/openapi.yaml`, o README passou a
+  apontar para essa especificação e o guia `ENTREGA_APRESENTACAO_LOCAL.md` foi
+  reconstruído como material de preparação para apresentação e live coding.
 
 ## Pendências abertas
 

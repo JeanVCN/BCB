@@ -46,10 +46,12 @@ cadastro/login -> conversas -> envio de mensagem -> fila/worker -> status -> fin
 - Retry de falhas transitórias e estorno idempotente em falhas definitivas.
 - Histórico financeiro para cliente e administrador.
 - Crédito pré-pago e ajuste de limite pós-pago por administrador.
-- Zeramento administrativo de saldo pré-pago ou consumo pós-pago para liberar
-  solicitação de mudança de plano.
-- Solicitação de mudança de plano pelo cliente e aprovação/rejeição pelo admin.
+- Solicitação de mudança de plano pelo cliente mesmo com pendência financeira.
+- Aprovação/rejeição de mudança de plano pelo admin, com zeramento
+  administrativo de saldo pré-pago ou consumo pós-pago antes da aprovação
+  quando houver pendência.
 - Interface responsiva com estados de carregamento, vazio, erro e sucesso.
+- Documentação OpenAPI 3.0 em `project-docs/openapi.yaml`.
 
 ## Tecnologias
 
@@ -189,10 +191,9 @@ docker compose down -v
     - Conteúdo com `[retry]` força falhas transitórias até esgotar retries e
       acionar estorno.
 11. Para testar mudança de plano:
-    - Pré-pago só solicita mudança com saldo igual a zero.
-    - Pós-pago só solicita mudança com consumo igual a zero.
-    - Se necessário, o admin pode zerar saldo/consumo pelo painel.
-    - O admin aprova ou rejeita pelo painel administrativo.
+    - O cliente pode solicitar a mudança mesmo com saldo/consumo pendente.
+    - Se houver pendência, a aprovação administrativa será bloqueada.
+    - O admin zera saldo/consumo pelo painel e então aprova ou rejeita.
 
 ## Verificações por terminal
 
@@ -241,7 +242,7 @@ npm run build
 │   ├── cmd/message-worker    # Worker da fila
 │   └── internal/modules      # Domínios da aplicação
 ├── frontend/                 # React + TypeScript + Vite
-├── project-docs/             # Decisões, contratos e modelo autoral
+├── project-docs/             # Decisões, contratos, OpenAPI e modelo autoral
 ├── ai-memory/                # Memória operacional para IA
 ├── docs/                     # Documentação oficial recebida do desafio
 ├── compose.yaml              # Orquestração Docker Compose
@@ -265,13 +266,26 @@ npm run build
 | `GET` | `/api/v1/admin/clients` | Listar clientes para admin |
 | `POST` | `/api/v1/admin/clients/{id}/activate` | Ativar cliente |
 | `GET` | `/api/v1/admin/clients/{id}/billing` | Consultar financeiro do cliente |
+| `GET` | `/api/v1/admin/clients/{id}/financial-transactions` | Histórico financeiro do cliente |
 | `POST` | `/api/v1/admin/clients/{id}/credits` | Adicionar crédito |
 | `PUT` | `/api/v1/admin/clients/{id}/postpaid-limit` | Ajustar limite pós-pago |
 | `POST` | `/api/v1/admin/clients/{id}/zero-balance` | Zerar saldo/consumo |
 | `GET` | `/api/v1/admin/plan-change-requests` | Listar mudanças de plano |
+| `POST` | `/api/v1/admin/plan-change-requests/{id}/approve` | Aprovar mudança de plano |
+| `POST` | `/api/v1/admin/plan-change-requests/{id}/reject` | Rejeitar mudança de plano |
 
 Envio de mensagem e mutações financeiras administrativas usam
 `Idempotency-Key`.
+
+## Swagger/OpenAPI
+
+A especificação OpenAPI 3.0 da API está em
+[project-docs/openapi.yaml](project-docs/openapi.yaml). Ela documenta os
+schemas, autenticação Bearer JWT, cabeçalho `Idempotency-Key`, respostas de
+erro e rotas efetivamente registradas no backend.
+
+Para visualizar em uma interface Swagger, abra o arquivo em ferramentas como
+Swagger Editor, Swagger UI ou Redoc.
 
 ## Decisões técnicas
 
@@ -293,7 +307,6 @@ Envio de mensagem e mutações financeiras administrativas usam
 - Estados `delivered` e `read` ficaram fora do escopo inicial.
 - Não há reset mensal automático do consumo pós-pago.
 - Não há paginação avançada ou busca textual nas listas.
-- Não há Swagger/OpenAPI nesta versão.
 
 ## Documentação complementar
 
@@ -305,5 +318,6 @@ documentação autoral do projeto.
 - [Critérios de aceite](project-docs/acceptance-criteria.md)
 - [Modelo conceitual](project-docs/domain-model.md)
 - [Contratos HTTP](project-docs/api-contracts.md)
+- [OpenAPI 3.0](project-docs/openapi.yaml)
 - [Fundação técnica](project-docs/technical-foundation.md)
 - [Histórico de implementação](HISTORICO_IMPLEMENTACAO.md)

@@ -1,0 +1,1137 @@
+openapi: 3.0.3
+info:
+  title: Big Chat Brasil API
+  version: 1.0.0
+  description: |
+    Documentacao OpenAPI da API HTTP v1 do Big Chat Brasil.
+
+    A API implementa cadastro e ativacao de empresas clientes, autenticacao,
+    conversas, envio simulado de mensagens SMS/WhatsApp, cobranca por mensagem,
+    historico financeiro, fila persistente, retry, estorno e solicitacao de
+    mudanca de plano com decisao administrativa.
+
+    Valores financeiros sao representados em centavos. Operacoes de envio de
+    mensagem e mutacoes financeiras administrativas exigem `Idempotency-Key`.
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Backend local com portas padrao
+  - url: http://localhost:18080/api/v1
+    description: Backend local com portas alternativas usadas na validacao
+tags:
+  - name: Health
+    description: Verificacao de vida e prontidao fora do prefixo versionado
+  - name: Auth
+    description: Cadastro, login e sessao
+  - name: Admin
+    description: Operacoes administrativas
+  - name: Billing
+    description: Consultas e mutacoes financeiras
+  - name: Conversations
+    description: Conversas e destinatarios
+  - name: Messages
+    description: Historico e envio de mensagens
+  - name: Plan Changes
+    description: Workflow de mudanca de plano
+security:
+  - bearerAuth: []
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Autocadastra uma empresa cliente
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              prepaid:
+                value:
+                  name: Empresa Exemplo
+                  documentType: cnpj
+                  documentId: "11222333000181"
+                  password: SenhaForte123!
+                  requestedPlan: prepaid
+      responses:
+        "201":
+          description: Cadastro recebido e aguardando aprovacao
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "409":
+          description: CPF/CNPJ ja cadastrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Autentica admin ou cliente ativo
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              admin:
+                value:
+                  login: admin
+                  password: ChangeThisAdminPassword123!
+      responses:
+        "200":
+          description: Sessao autenticada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "429":
+          description: Login temporariamente limitado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+  /me:
+    get:
+      tags: [Auth]
+      summary: Retorna a identidade autenticada
+      responses:
+        "200":
+          description: Usuario autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+  /conversations:
+    get:
+      tags: [Conversations]
+      summary: Lista conversas da empresa autenticada
+      responses:
+        "200":
+          description: Conversas visiveis ao cliente
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Conversations]
+      summary: Cria ou recupera uma conversa por telefone do destinatario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConversationRequest'
+            examples:
+              default:
+                value:
+                  recipient:
+                    name: Maria da Silva
+                    phone: "+5555555555555"
+      responses:
+        "201":
+          description: Conversa criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        "200":
+          description: Conversa ja existente para o telefone informado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
+  /conversations/{conversationId}/messages:
+    parameters:
+      - $ref: '#/components/parameters/ConversationId'
+    get:
+      tags: [Messages]
+      summary: Lista mensagens de uma conversa
+      responses:
+        "200":
+          description: Historico cronologico da conversa
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+        "404":
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Messages]
+      summary: Envia uma mensagem simulada
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+            examples:
+              success:
+                value:
+                  content: Sua solicitacao foi processada.
+                  channel: whatsapp
+                  priority: normal
+              permanentFailure:
+                value:
+                  content: "[fail] simular falha permanente"
+                  channel: sms
+                  priority: urgent
+              retry:
+                value:
+                  content: "[retry] simular falha transitoria"
+                  channel: whatsapp
+                  priority: urgent
+      responses:
+        "202":
+          description: Mensagem aceita, cobrada e enfileirada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendMessageResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
+        "503":
+          $ref: '#/components/responses/ServiceUnavailable'
+  /billing:
+    get:
+      tags: [Billing]
+      summary: Consulta o perfil financeiro do cliente autenticado
+      responses:
+        "200":
+          description: Perfil financeiro atual
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingProfile'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+        "404":
+          $ref: '#/components/responses/NotFound'
+  /billing/transactions:
+    get:
+      tags: [Billing]
+      summary: Lista historico financeiro do cliente autenticado
+      responses:
+        "200":
+          description: Transacoes financeiras
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialTransactionList'
+  /plan-change-requests:
+    post:
+      tags: [Plan Changes]
+      summary: Solicita mudanca de plano
+      description: |
+        O cliente pode solicitar a mudanca mesmo com saldo pre-pago ou consumo
+        pos-pago pendente. A aprovacao administrativa continua exigindo
+        saldo/consumo zerado.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlanChangeRequest'
+      responses:
+        "201":
+          description: Solicitacao criada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanChangeRequest'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
+  /plan-change-requests/current:
+    get:
+      tags: [Plan Changes]
+      summary: Consulta a solicitacao atual/mais recente do cliente
+      responses:
+        "200":
+          description: Solicitacao encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanChangeRequest'
+        "404":
+          $ref: '#/components/responses/NotFound'
+  /plan-change-requests/{requestId}/cancel:
+    post:
+      tags: [Plan Changes]
+      summary: Cancela solicitacao pendente propria
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        "204":
+          description: Solicitacao cancelada
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+  /admin/clients:
+    get:
+      tags: [Admin]
+      summary: Lista clientes para administracao
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ClientStatus'
+      responses:
+        "200":
+          description: Clientes cadastrados
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Client'
+        "403":
+          $ref: '#/components/responses/Forbidden'
+  /admin/clients/{clientId}/activate:
+    post:
+      tags: [Admin]
+      summary: Ativa ou reconsidera uma empresa cliente
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateClientRequest'
+      responses:
+        "204":
+          description: Cliente ativado
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
+  /admin/clients/{clientId}/reject:
+    post:
+      tags: [Admin]
+      summary: Rejeita cadastro pendente
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+      requestBody:
+        $ref: '#/components/requestBodies/Reason'
+      responses:
+        "204":
+          description: Cadastro rejeitado
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+  /admin/clients/{clientId}/deactivate:
+    post:
+      tags: [Admin]
+      summary: Inativa uma empresa cliente
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+      requestBody:
+        $ref: '#/components/requestBodies/Reason'
+      responses:
+        "204":
+          description: Cliente inativado
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+  /admin/clients/{clientId}/billing:
+    get:
+      tags: [Admin, Billing]
+      summary: Consulta perfil financeiro de um cliente
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+      responses:
+        "200":
+          description: Perfil financeiro
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BillingProfile'
+        "404":
+          $ref: '#/components/responses/NotFound'
+  /admin/clients/{clientId}/credits:
+    post:
+      tags: [Admin, Billing]
+      summary: Adiciona credito a cliente pre-pago
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCreditRequest'
+      responses:
+        "204":
+          description: Credito registrado
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
+        "503":
+          $ref: '#/components/responses/ServiceUnavailable'
+  /admin/clients/{clientId}/postpaid-limit:
+    put:
+      tags: [Admin, Billing]
+      summary: Ajusta limite total de cliente pos-pago
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdjustPostpaidLimitRequest'
+      responses:
+        "204":
+          description: Limite atualizado
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
+        "503":
+          $ref: '#/components/responses/ServiceUnavailable'
+  /admin/clients/{clientId}/zero-balance:
+    post:
+      tags: [Admin, Billing]
+      summary: Zera saldo pre-pago ou consumo pos-pago vigente
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        $ref: '#/components/requestBodies/Reason'
+      responses:
+        "204":
+          description: Saldo/consumo zerado e auditado
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
+        "503":
+          $ref: '#/components/responses/ServiceUnavailable'
+  /admin/clients/{clientId}/financial-transactions:
+    get:
+      tags: [Admin, Billing]
+      summary: Lista historico financeiro de um cliente
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+      responses:
+        "200":
+          description: Transacoes financeiras
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancialTransactionList'
+  /admin/notifications/summary:
+    get:
+      tags: [Admin, Plan Changes]
+      summary: Retorna contadores administrativos
+      responses:
+        "200":
+          description: Resumo administrativo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSummary'
+  /admin/plan-change-requests:
+    get:
+      tags: [Admin, Plan Changes]
+      summary: Lista solicitacoes de mudanca de plano
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PlanRequestStatus'
+      responses:
+        "200":
+          description: Solicitacoes administrativas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlanChangeRequest'
+  /admin/plan-change-requests/{requestId}/approve:
+    post:
+      tags: [Admin, Plan Changes]
+      summary: Aprova mudanca de plano
+      description: Exige que saldo pre-pago ou consumo pos-pago atual esteja zerado.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovePlanChangeRequest'
+      responses:
+        "204":
+          description: Mudanca aprovada
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+        "422":
+          $ref: '#/components/responses/UnprocessableEntity'
+  /admin/plan-change-requests/{requestId}/reject:
+    post:
+      tags: [Admin, Plan Changes]
+      summary: Rejeita mudanca de plano
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        $ref: '#/components/requestBodies/Reason'
+      responses:
+        "204":
+          description: Mudanca rejeitada
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "404":
+          $ref: '#/components/responses/NotFound'
+        "409":
+          $ref: '#/components/responses/Conflict'
+
+  /health/live:
+    get:
+      tags: [Health]
+      summary: Liveness do processo HTTP
+      security: []
+      servers:
+        - url: http://localhost:8080
+        - url: http://localhost:18080
+      responses:
+        "200":
+          description: Processo vivo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthLive'
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Readiness com PostgreSQL e Redis
+      security: []
+      servers:
+        - url: http://localhost:8080
+        - url: http://localhost:18080
+      responses:
+        "200":
+          description: Dependencias prontas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthReady'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ClientId:
+      name: clientId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Chave unica por operacao idempotente.
+  requestBodies:
+    Reason:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ReasonRequest'
+  responses:
+    BadRequest:
+      description: Requisicao invalida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Unauthorized:
+      description: Sessao ausente, invalida ou expirada
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Forbidden:
+      description: Papel, estado ou propriedade incompativel
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFound:
+      description: Recurso inexistente ou nao visivel ao ator
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Conflict:
+      description: Duplicidade, transicao invalida ou conflito de idempotencia
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    UnprocessableEntity:
+      description: Regra de negocio nao satisfeita
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    ServiceUnavailable:
+      description: Dependencia essencial temporariamente indisponivel
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    DocumentType:
+      type: string
+      enum: [cpf, cnpj]
+    ClientStatus:
+      type: string
+      enum: [pending, active, inactive, rejected]
+    Role:
+      type: string
+      enum: [admin, client]
+    PlanType:
+      type: string
+      enum: [prepaid, postpaid]
+    Channel:
+      type: string
+      enum: [sms, whatsapp]
+    Priority:
+      type: string
+      enum: [normal, urgent]
+    MessageStatus:
+      type: string
+      enum: [queued, processing, sent, failed]
+    PlanRequestStatus:
+      type: string
+      enum: [pending, approved, rejected, cancelled]
+    FinancialTransactionType:
+      type: string
+      enum: [credit, debit, consumption, refund, consumption_reversal]
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              example: invalid_request
+            message:
+              type: string
+              example: Revise os dados informados.
+            fields:
+              type: object
+              additionalProperties:
+                type: string
+            requestId:
+              type: string
+    RegisterRequest:
+      type: object
+      required: [name, documentType, documentId, password, requestedPlan]
+      properties:
+        name:
+          type: string
+        documentType:
+          $ref: '#/components/schemas/DocumentType'
+        documentId:
+          type: string
+          description: CPF/CNPJ; a API normaliza para digitos.
+        password:
+          type: string
+          format: password
+          minLength: 9
+          maxLength: 128
+        requestedPlan:
+          $ref: '#/components/schemas/PlanType'
+    RegisterResponse:
+      type: object
+      required: [clientId, status, message]
+      properties:
+        clientId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ClientStatus'
+        message:
+          type: string
+    LoginRequest:
+      type: object
+      required: [login, password]
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+          format: password
+    LoginResponse:
+      type: object
+      required: [accessToken, tokenType, expiresInSeconds, user]
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresInSeconds:
+          type: integer
+          example: 3600
+        user:
+          $ref: '#/components/schemas/SessionUser'
+    SessionUser:
+      type: object
+      required: [id, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+        role:
+          $ref: '#/components/schemas/Role'
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+    MeResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: '#/components/schemas/SessionUser'
+    Client:
+      type: object
+      required: [id, name, documentType, documentId, status, requestedPlan, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        documentType:
+          $ref: '#/components/schemas/DocumentType'
+        documentId:
+          type: string
+        status:
+          $ref: '#/components/schemas/ClientStatus'
+        requestedPlan:
+          $ref: '#/components/schemas/PlanType'
+        statusReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    ActivateClientRequest:
+      oneOf:
+        - type: object
+          required: [planType, initialBalanceCents]
+          properties:
+            planType:
+              type: string
+              enum: [prepaid]
+            initialBalanceCents:
+              type: integer
+              format: int64
+              minimum: 0
+        - type: object
+          required: [planType, totalLimitCents]
+          properties:
+            planType:
+              type: string
+              enum: [postpaid]
+            totalLimitCents:
+              type: integer
+              format: int64
+              minimum: 0
+    ReasonRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+      example:
+        reason: Preparacao para mudanca de plano
+    Recipient:
+      type: object
+      required: [id, name, phone]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phone:
+          type: string
+          example: "+5555555555555"
+    CreateConversationRequest:
+      type: object
+      required: [recipient]
+      properties:
+        recipient:
+          type: object
+          required: [name, phone]
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+              description: Telefone normalizado para E.164 pela API.
+    Conversation:
+      type: object
+      required: [id, recipient, lastActivityAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        recipient:
+          $ref: '#/components/schemas/Recipient'
+        lastActivityAt:
+          type: string
+          format: date-time
+          nullable: true
+    SendMessageRequest:
+      type: object
+      required: [content, channel, priority]
+      properties:
+        content:
+          type: string
+        channel:
+          $ref: '#/components/schemas/Channel'
+        priority:
+          $ref: '#/components/schemas/Priority'
+    Message:
+      type: object
+      required: [id, conversationId, content, channel, priority, costCents, status, createdAt, queuedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversationId:
+          type: string
+          format: uuid
+        content:
+          type: string
+        channel:
+          $ref: '#/components/schemas/Channel'
+        priority:
+          $ref: '#/components/schemas/Priority'
+        costCents:
+          type: integer
+          format: int64
+        status:
+          $ref: '#/components/schemas/MessageStatus'
+        failureCode:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        queuedAt:
+          type: string
+          format: date-time
+        processingAt:
+          type: string
+          format: date-time
+          nullable: true
+        sentAt:
+          type: string
+          format: date-time
+          nullable: true
+        failedAt:
+          type: string
+          format: date-time
+          nullable: true
+    SendMessageResponse:
+      allOf:
+        - $ref: '#/components/schemas/Message'
+        - type: object
+          required: [billing]
+          properties:
+            billing:
+              $ref: '#/components/schemas/BillingSummary'
+    BillingSummary:
+      type: object
+      required:
+        - planType
+        - prepaidBalanceCents
+        - postpaidTotalLimitCents
+        - postpaidConsumedCents
+        - postpaidAvailableCents
+        - currentPlanAvailableCents
+      properties:
+        planType:
+          $ref: '#/components/schemas/PlanType'
+        prepaidBalanceCents:
+          type: integer
+          format: int64
+        postpaidTotalLimitCents:
+          type: integer
+          format: int64
+        postpaidConsumedCents:
+          type: integer
+          format: int64
+        postpaidAvailableCents:
+          type: integer
+          format: int64
+        currentPlanAvailableCents:
+          type: integer
+          format: int64
+    BillingProfile:
+      allOf:
+        - $ref: '#/components/schemas/BillingSummary'
+        - type: object
+          required: [updatedAt]
+          properties:
+            updatedAt:
+              type: string
+              format: date-time
+    FinancialTransaction:
+      type: object
+      required: [id, type, amountCents, idempotencyKey, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/FinancialTransactionType'
+        amountCents:
+          type: integer
+          format: int64
+        messageId:
+          type: string
+          format: uuid
+          nullable: true
+        reversesTransactionId:
+          type: string
+          format: uuid
+          nullable: true
+        actorUserId:
+          type: string
+          format: uuid
+          nullable: true
+        idempotencyKey:
+          type: string
+        reason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    FinancialTransactionList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FinancialTransaction'
+    AddCreditRequest:
+      type: object
+      required: [amountCents]
+      properties:
+        amountCents:
+          type: integer
+          format: int64
+          minimum: 1
+        reason:
+          type: string
+    AdjustPostpaidLimitRequest:
+      type: object
+      required: [totalLimitCents]
+      properties:
+        totalLimitCents:
+          type: integer
+          format: int64
+          minimum: 0
+        reason:
+          type: string
+    CreatePlanChangeRequest:
+      type: object
+      required: [targetPlan]
+      properties:
+        targetPlan:
+          $ref: '#/components/schemas/PlanType'
+    ApprovePlanChangeRequest:
+      type: object
+      properties:
+        initialBalanceCents:
+          type: integer
+          format: int64
+          minimum: 0
+        totalLimitCents:
+          type: integer
+          format: int64
+          minimum: 0
+      description: Use `initialBalanceCents` ao aprovar destino pre-pago e `totalLimitCents` ao aprovar destino pos-pago.
+    PlanChangeRequest:
+      type: object
+      required: [id, clientId, fromPlan, toPlan, status, requestedByUserId, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        clientName:
+          type: string
+        fromPlan:
+          $ref: '#/components/schemas/PlanType'
+        toPlan:
+          $ref: '#/components/schemas/PlanType'
+        status:
+          $ref: '#/components/schemas/PlanRequestStatus'
+        requestedByUserId:
+          type: string
+          format: uuid
+        cancelledByUserId:
+          type: string
+          format: uuid
+          nullable: true
+        decidedByUserId:
+          type: string
+          format: uuid
+          nullable: true
+        rejectionReason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+          nullable: true
+        decidedAt:
+          type: string
+          format: date-time
+          nullable: true
+    AdminSummary:
+      type: object
+      required: [pendingClientActivations, pendingPlanChanges]
+      properties:
+        pendingClientActivations:
+          type: integer
+          format: int64
+        pendingPlanChanges:
+          type: integer
+          format: int64
+    HealthLive:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+    HealthReady:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ready

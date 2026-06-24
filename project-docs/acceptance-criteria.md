@@ -47,7 +47,7 @@ não define endpoints, banco de dados ou estrutura de código.
 - [x] Administrador consegue alterar o limite total do pós-pago sem apagar seu
   consumo acumulado.
 - [x] Administrador consegue zerar saldo pré-pago ou consumo pós-pago para
-  liberar a solicitação de mudança de plano quando aplicável.
+  liberar a aprovação de mudança de plano quando aplicável.
 - [x] Saldo, limite total, consumo e disponibilidade são apresentados de forma
   coerente com o plano.
 - [x] Toda alteração financeira cria histórico rastreável.
@@ -58,13 +58,13 @@ não define endpoints, banco de dados ou estrutura de código.
 
 ## 5. Solicitação de mudança de plano
 
-- [x] Cliente pré-pago somente solicita mudança com saldo igual a zero.
-- [x] Cliente pós-pago somente solicita mudança com consumo igual a zero.
+- [x] Cliente pré-pago pode solicitar mudança mesmo com saldo pendente.
+- [x] Cliente pós-pago pode solicitar mudança mesmo com consumo pendente.
 - [x] Um cliente não cria duas solicitações pendentes.
 - [x] O cliente pode cancelar sua solicitação pendente.
 - [x] O painel administrativo exibe contador e lista de solicitações pendentes.
 - [x] Um administrador pode aprovar ou rejeitar uma solicitação.
-- [x] A aprovação revalida autorização e condição financeira.
+- [x] A aprovação revalida autorização e exige saldo/consumo zerado.
 - [x] Uma aprovação inválida não altera o plano.
 - [x] `pending`, `approved`, `rejected` e `cancelled` são transições
   controladas e auditáveis.

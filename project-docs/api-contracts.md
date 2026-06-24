@@ -455,8 +455,8 @@ Exige `client` ativo.
 }
 ```
 
-Resposta `201` com status `pending`. Saldo pré-pago ou consumo pós-pago
-diferente de zero retorna `422`. Solicitação pendente existente retorna `409`.
+Resposta `201` com status `pending`, mesmo quando houver saldo pré-pago ou
+consumo pós-pago pendente. Solicitação pendente existente retorna `409`.
 
 ### GET `/plan-change-requests/current`
 
@@ -488,8 +488,9 @@ Para destino pré-pago:
 }
 ```
 
-Revalida estado, saldo/consumo e status da solicitação dentro da operação
-atômica. Conflito retorna `409` ou regra financeira violada retorna `422`.
+Revalida estado, saldo/consumo zerado e status da solicitação dentro da
+operação atômica. Conflito retorna `409` ou regra financeira violada retorna
+`422`.
 
 ### POST `/admin/plan-change-requests/{requestId}/reject`
 

@@ -45,10 +45,6 @@ func (repository *Repository) create(ctx context.Context, clientID, userID, targ
 	if profile.planType == targetPlan {
 		return Request{}, ErrSamePlan
 	}
-	if !profile.canChange() {
-		return Request{}, ErrFinancialStateBlocked
-	}
-
 	requestID := uuid.NewString()
 	request, err := repository.insertRequest(ctx, tx, requestID, clientID, userID, profile.planType, targetPlan)
 	if uniqueViolation(err) {
@@ -201,7 +197,7 @@ func (repository *Repository) approve(ctx context.Context, actorID, requestID st
 	if err != nil {
 		return err
 	}
-	if profile.planType != request.FromPlan || !profile.canChange() {
+	if profile.planType != request.FromPlan || !profile.canApprovePlanChange() {
 		return ErrFinancialStateBlocked
 	}
 
@@ -283,7 +279,7 @@ type billingSnapshot struct {
 	postpaidConsumed int64
 }
 
-func (snapshot billingSnapshot) canChange() bool {
+func (snapshot billingSnapshot) canApprovePlanChange() bool {
 	switch snapshot.planType {
 	case string(domain.PlanPrepaid):
 		return snapshot.prepaidBalance == 0

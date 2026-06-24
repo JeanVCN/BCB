@@ -225,9 +225,9 @@ Workflow de mudança de plano.
 Invariantes:
 
 - no máximo uma solicitação pendente por empresa;
-- pré-pago solicita apenas com saldo zero;
-- pós-pago solicita apenas com consumo zero;
-- aprovação revalida saldo/consumo e estado do cliente;
+- cliente pode solicitar mudança mesmo com saldo pré-pago ou consumo pós-pago
+  pendente;
+- aprovação revalida saldo/consumo zerado e estado do cliente;
 - cliente cancela apenas a própria solicitação pendente;
 - somente admin aprova ou rejeita.
 

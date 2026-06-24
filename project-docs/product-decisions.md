@@ -48,6 +48,7 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Sessão | Token de uma hora, sem renovação automática | Manter segurança e escopo inicial simples |
 | Ordem da fila | Urgente antes de normal; FIFO dentro da prioridade | Cumprir prioridade sem perder previsibilidade |
 | README de entrega | Manter o README principal focado no que o desafio pede: descrição, premissas, tecnologias, execução, testes, funcionalidades, limitações e links | Facilitar avaliação e uso do projeto sem misturar histórico interno |
+| OpenAPI | Manter uma especificação OpenAPI 3.0 em `project-docs/openapi.yaml` e referencia-la no README | Dar ao avaliador um contrato navegável da API sem depender apenas de texto livre |
 | Histórico de implementação | Preservar fases, correções e evolução incremental em `HISTORICO_IMPLEMENTACAO.md` | Manter rastreabilidade sem poluir a documentação pública principal |
 | Organização inicial | Monorepo com backend, frontend e infraestrutura na raiz | Facilitar integração e execução do desafio |
 | Runtime HTTP | Timeouts, logs estruturados e shutdown gracioso | Partir de um servidor previsível e operável |
@@ -65,11 +66,13 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Migration automática | `RUN_MIGRATIONS=true` por padrão, configurável | Facilitar avaliação local sem impedir operação controlada por pipeline |
 | Idempotência financeira | Tabela genérica de registros idempotentes para mutações administrativas | Reaproveitar a proteção em crédito e ajuste de limite sem confundir limite com movimentação financeira |
 | Ajuste de limite | Registrar em auditoria, não como transação financeira | Limite não movimenta dinheiro; transações ficam reservadas a crédito, débito, consumo e estorno |
-| Zeramento para troca de plano | Permitir que admin zere saldo pré-pago ou consumo pós-pago com idempotência e auditoria | Desbloquear a solicitação de mudança de plano durante operação/demonstração sem alterar a regra de que o cliente só solicita quando não há pendência financeira |
+| Zeramento para troca de plano | Permitir que admin zere saldo pré-pago ou consumo pós-pago com idempotência e auditoria | Desbloquear a aprovação de mudança de plano quando existir pendência financeira, sem impedir que o cliente registre a solicitação |
 | Worker de mensagens | Rodar como serviço independente da API, consumindo jobs persistentes no PostgreSQL | Evitar acoplar o processamento de disparos ao ciclo de atualização do serviço HTTP |
 | Simulação de envio | Sucesso por padrão; `[fail]` força falha permanente; `[retry]` força falha transitória até estorno | Permitir demonstrar sucesso, retry e estorno sem custo de provedor externo |
 | Constantes de domínio | Centralizar no backend e espelhar no frontend | Reduzir comparação insegura de strings sem introduzir tabelas auxiliares prematuras |
 | Arquitetura frontend | Organizar React em `features`, `components`, `types` e `utils`, mantendo `App.tsx` como composição por sessão/papel e `api.ts` como integração HTTP centralizada | Melhorar legibilidade, manutenção e apresentação técnica sem overengineering |
+| Navegação frontend | Separar áreas por estado de tela em vez de usar âncoras para rolar uma página longa; cliente navega entre dashboard, conversas e financeiro; admin navega entre dashboard, solicitações e clientes | Dar sensação de sistema profissional, reduzir excesso de informação simultânea e tornar o chat uma área central de trabalho |
+| Experiência cliente no frontend | Usuário `client` entra inicialmente em Conversas; topbar exibe disponível do plano vigente; telefone de destinatário usa máscara visual com exemplo fictício `+55 (55) 5555-5555` | Reforçar chat como função central, manter contexto financeiro visível durante envio e melhorar preenchimento sem alterar normalização backend |
 | Fronteira financeiro/mensagens | `messages` orquestra o envio; `billing` executa cobrança e estorno usando a mesma transação | Preservar atomicidade sem espalhar regra financeira no domínio de mensagens |
 | Dependência entre domínios | `messages` consome uma interface do service de `billing`, não o repository concreto | Compartilhar regra de negócio pela camada correta e manter persistência encapsulada no domínio financeiro |
 | Organização do repository financeiro | Manter o núcleo transacional em `repository.go` e dividir auxiliares em poucos arquivos temáticos | Melhorar navegação sem deixar o arquivo principal vazio nem transformar o pacote em microarquivos |
@@ -132,16 +135,17 @@ plano, com decisão administrativa e auditoria.
 
 ### Mudança de plano
 
-- A conversão só pode ser concluída quando não houver valor financeiro
-  pendente: saldo pré-pago igual a zero ou consumo pós-pago igual a zero,
-  conforme o plano atual.
-- O cliente pode solicitar uma mudança quando cumprir essa condição.
+- O cliente pode solicitar uma mudança de plano mesmo quando houver valor
+  financeiro pendente.
+- A conversão só pode ser aprovada pelo administrador quando não houver valor
+  financeiro pendente: saldo pré-pago igual a zero ou consumo pós-pago igual a
+  zero, conforme o plano atual.
 - Só pode existir uma solicitação pendente por cliente.
 - Os estados da solicitação são `pending`, `approved`, `rejected` e `cancelled`.
 - O cliente pode cancelar a solicitação enquanto ela estiver pendente.
 - O administrador pode aprovar ou rejeitar a solicitação.
 - O administrador pode zerar saldo pré-pago ou consumo pós-pago antes da
-  solicitação quando a operação fizer sentido para desbloquear a regra de
+  aprovação quando a operação fizer sentido para desbloquear a regra de
   ausência de pendência financeira.
 - A aprovação deve revalidar a situação financeira e as permissões no momento
   da alteração.
@@ -151,9 +155,10 @@ plano, com decisão administrativa e auditoria.
 
 Na implementação atual, `plan_change_requests` registra a solicitação, a
 empresa solicitante, o plano de origem/destino, o status e os atores das
-transições. O cliente cria e cancela solicitações próprias, e o administrador
-lista, aprova ou rejeita pendências. A aprovação revalida status ativo,
-saldo/consumo zerado e plano de origem dentro da transação que altera
+transições. O cliente cria e cancela solicitações próprias mesmo com pendência
+financeira, e o administrador lista, aprova ou rejeita pendências. A aprovação
+revalida status ativo, saldo/consumo zerado e plano de origem dentro da
+transação que altera
 `billing_profiles`; solicitações rejeitadas exigem motivo. O resumo
 administrativo inclui contador de cadastros pendentes e mudanças de plano
 pendentes.
@@ -361,3 +366,23 @@ Não há definição funcional bloqueante para iniciar a implementação.
   layout, tipos de UI e utilitários foram separados de `App.tsx`, que passou a
   atuar apenas como composição por sessão/papel. Decisão solicitada pelo
   responsável do projeto em 2026-06-24.
+- Reformulada a navegação visual do frontend para abandonar a experiência de
+  página única longa. Cliente passa a alternar entre dashboard, conversas e
+  financeiro; administrador alterna entre dashboard, solicitações e clientes.
+  O chat foi tratado como workspace principal com histórico scrollável próprio
+  e campo de envio fixo dentro da área de conversa. Decisão solicitada pelo
+  responsável do projeto em 2026-06-24.
+- Refinada a experiência do usuário cliente: login de `client` passa a abrir
+  diretamente em Conversas, a topbar exibe o disponível do plano vigente, o
+  dashboard usa o rótulo "Último atendimento" e o telefone do destinatário usa
+  máscara visual brasileira com exemplo fictício `+55 (55) 5555-5555`, sem alterar a normalização
+  E.164 no backend. Decisão solicitada pelo responsável do projeto em
+  2026-06-24.
+- Ajustada a regra de solicitação de mudança de plano: cliente pode solicitar
+  troca mesmo com saldo pré-pago ou consumo pós-pago pendente; o administrador
+  só pode aprovar depois de zerar a pendência financeira correspondente.
+  Decisão solicitada pelo responsável do projeto em 2026-06-24.
+- Adicionada documentação OpenAPI 3.0 em `project-docs/openapi.yaml`,
+  referenciada no README, e reconstruído o arquivo
+  `ENTREGA_APRESENTACAO_LOCAL.md` como roteiro de preparação para apresentação
+  e live coding. Decisão solicitada pelo responsável do projeto em 2026-06-24.

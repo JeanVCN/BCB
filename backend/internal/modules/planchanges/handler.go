@@ -118,7 +118,7 @@ func (handler *Handler) writeError(ctx *gin.Context, err error) {
 	case errors.Is(err, ErrSamePlan):
 		response.Error(ctx, http.StatusUnprocessableEntity, "same_plan", "A empresa já está neste plano.", nil)
 	case errors.Is(err, ErrFinancialStateBlocked):
-		response.Error(ctx, http.StatusUnprocessableEntity, "financial_state_blocks_plan_change", "Quite o saldo ou consumo pendente antes de mudar de plano.", nil)
+		response.Error(ctx, http.StatusUnprocessableEntity, "financial_state_blocks_plan_change", "Zere o saldo ou consumo pendente antes de aprovar a mudança de plano.", nil)
 	case errors.Is(err, ErrPendingRequestExists):
 		response.Error(ctx, http.StatusConflict, "pending_plan_change_exists", "Já existe uma solicitação de mudança de plano pendente.", nil)
 	case errors.Is(err, ErrInvalidTransition):
