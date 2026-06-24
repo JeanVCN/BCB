@@ -20,11 +20,11 @@ type Repository struct {
 	pool *pgxpool.Pool
 }
 
-func NewRepository(pool *pgxpool.Pool) *Repository {
+func newRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-func (repository *Repository) CreateOrGet(ctx context.Context, clientID, name, phone string) (Conversation, bool, error) {
+func (repository *Repository) createOrGet(ctx context.Context, clientID, name, phone string) (Conversation, bool, error) {
 	tx, err := repository.pool.Begin(ctx)
 	if err != nil {
 		return Conversation{}, false, fmt.Errorf("begin conversation creation: %w", err)
@@ -70,7 +70,7 @@ func (repository *Repository) CreateOrGet(ctx context.Context, clientID, name, p
 	return conversation, conversation.ID == conversationID, nil
 }
 
-func (repository *Repository) List(ctx context.Context, clientID string) ([]Conversation, error) {
+func (repository *Repository) list(ctx context.Context, clientID string) ([]Conversation, error) {
 	if err := repository.ensureActiveClient(ctx, clientID); err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (repository *Repository) List(ctx context.Context, clientID string) ([]Conv
 	return conversations, rows.Err()
 }
 
-func (repository *Repository) Messages(ctx context.Context, clientID, conversationID string) ([]Message, error) {
+func (repository *Repository) messages(ctx context.Context, clientID, conversationID string) ([]Message, error) {
 	if err := repository.ensureActiveClient(ctx, clientID); err != nil {
 		return nil, err
 	}

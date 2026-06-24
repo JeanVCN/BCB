@@ -13,11 +13,11 @@ type Handler struct {
 	service *Service
 }
 
-func NewHandler(service *Service) *Handler {
+func newHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func (handler *Handler) Create(ctx *gin.Context) {
+func (handler *Handler) create(ctx *gin.Context) {
 	claims, _ := access.ClaimsFromContext(ctx)
 	var request struct {
 		Recipient struct {
@@ -30,13 +30,13 @@ func (handler *Handler) Create(ctx *gin.Context) {
 		return
 	}
 
-	conversation, created, err := handler.service.CreateOrGet(ctx, *claims.ClientID, request.Recipient.Name, request.Recipient.Phone)
+	conversation, created, err := handler.service.createOrGet(ctx, *claims.ClientID, request.Recipient.Name, request.Recipient.Phone)
 	handler.writeConversationResult(ctx, conversation, created, err)
 }
 
-func (handler *Handler) List(ctx *gin.Context) {
+func (handler *Handler) list(ctx *gin.Context) {
 	claims, _ := access.ClaimsFromContext(ctx)
-	conversations, err := handler.service.List(ctx, *claims.ClientID)
+	conversations, err := handler.service.list(ctx, *claims.ClientID)
 	if err != nil {
 		handler.writeError(ctx, err)
 		return
@@ -44,9 +44,9 @@ func (handler *Handler) List(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"items": conversations})
 }
 
-func (handler *Handler) Messages(ctx *gin.Context) {
+func (handler *Handler) messages(ctx *gin.Context) {
 	claims, _ := access.ClaimsFromContext(ctx)
-	messages, err := handler.service.Messages(ctx, *claims.ClientID, ctx.Param("conversationId"))
+	messages, err := handler.service.messages(ctx, *claims.ClientID, ctx.Param("conversationId"))
 	if err != nil {
 		handler.writeError(ctx, err)
 		return

@@ -39,7 +39,7 @@ func (worker *Worker) Run(ctx context.Context) {
 
 func (worker *Worker) runOnce(ctx context.Context) {
 	for {
-		job, found, err := worker.repository.ClaimNextJob(ctx, worker.id)
+		job, found, err := worker.repository.claimNextJob(ctx, worker.id)
 		if err != nil {
 			worker.logger.Error("failed to claim dispatch job", "error", err)
 			return
@@ -60,14 +60,14 @@ func (worker *Worker) process(ctx context.Context, job dispatchJob) error {
 	outcome, errorCode := simulateDispatch(job)
 	switch outcome {
 	case domain.DeliveryAttemptSent:
-		return worker.repository.CompleteJob(ctx, job)
+		return worker.repository.completeJob(ctx, job)
 	case domain.DeliveryAttemptPermanentFailure:
-		return worker.repository.FailJob(ctx, job, string(domain.DeliveryAttemptPermanentFailure), errorCode)
+		return worker.repository.failJob(ctx, job, string(domain.DeliveryAttemptPermanentFailure), errorCode)
 	default:
 		if job.AttemptCount < maxAttempts {
-			return worker.repository.RetryJob(ctx, job, time.Now().UTC().Add(retryDelay(job.AttemptCount)), errorCode)
+			return worker.repository.retryJob(ctx, job, time.Now().UTC().Add(retryDelay(job.AttemptCount)), errorCode)
 		}
-		return worker.repository.FailJob(ctx, job, string(domain.DeliveryAttemptTransientFailure), errorCode)
+		return worker.repository.failJob(ctx, job, string(domain.DeliveryAttemptTransientFailure), errorCode)
 	}
 }
 

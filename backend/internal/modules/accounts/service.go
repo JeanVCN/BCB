@@ -14,11 +14,11 @@ type Service struct {
 	repository *Repository
 }
 
-func NewService(repository *Repository) *Service {
+func newService(repository *Repository) *Service {
 	return &Service{repository: repository}
 }
 
-func (service *Service) Register(ctx context.Context, name, documentType, document, password, plan string) (string, error) {
+func (service *Service) register(ctx context.Context, name, documentType, document, password, plan string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return "", errors.New("name is required")
@@ -26,7 +26,7 @@ func (service *Service) Register(ctx context.Context, name, documentType, docume
 	if plan != string(domain.PlanPrepaid) && plan != string(domain.PlanPostpaid) {
 		return "", errors.New("requestedPlan must be prepaid or postpaid")
 	}
-	normalizedDocument, err := NormalizeDocument(document, documentType)
+	normalizedDocument, err := normalizeDocument(document, documentType)
 	if err != nil {
 		return "", err
 	}
@@ -37,7 +37,7 @@ func (service *Service) Register(ctx context.Context, name, documentType, docume
 	if err != nil {
 		return "", err
 	}
-	return service.repository.Register(ctx, Registration{
+	return service.repository.register(ctx, Registration{
 		Name: name, DocumentType: documentType, Document: normalizedDocument,
 		PasswordHash: hash, RequestedPlan: plan,
 	})

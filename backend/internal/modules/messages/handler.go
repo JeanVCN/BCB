@@ -14,11 +14,11 @@ type Handler struct {
 	service *Service
 }
 
-func NewHandler(service *Service) *Handler {
+func newHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func (handler *Handler) Send(ctx *gin.Context) {
+func (handler *Handler) send(ctx *gin.Context) {
 	claims, _ := access.ClaimsFromContext(ctx)
 	var request struct {
 		Content  string `json:"content" binding:"required"`
@@ -30,7 +30,7 @@ func (handler *Handler) Send(ctx *gin.Context) {
 		return
 	}
 
-	result, err := handler.service.Send(ctx, *claims.ClientID, claims.Subject, ctx.Param("conversationId"), request.Content, request.Channel, request.Priority, ctx.GetHeader("Idempotency-Key"))
+	result, err := handler.service.send(ctx, *claims.ClientID, claims.Subject, ctx.Param("conversationId"), request.Content, request.Channel, request.Priority, ctx.GetHeader("Idempotency-Key"))
 	if err != nil {
 		handler.writeError(ctx, err)
 		return
@@ -38,9 +38,9 @@ func (handler *Handler) Send(ctx *gin.Context) {
 	ctx.JSON(http.StatusAccepted, result)
 }
 
-func (handler *Handler) List(ctx *gin.Context) {
+func (handler *Handler) list(ctx *gin.Context) {
 	claims, _ := access.ClaimsFromContext(ctx)
-	messages, err := handler.service.List(ctx, *claims.ClientID, ctx.Param("conversationId"))
+	messages, err := handler.service.list(ctx, *claims.ClientID, ctx.Param("conversationId"))
 	if err != nil {
 		handler.writeError(ctx, err)
 		return

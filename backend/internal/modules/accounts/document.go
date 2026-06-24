@@ -8,7 +8,7 @@ import (
 	"bcb/backend/internal/domain"
 )
 
-func NormalizeDocument(value, documentType string) (string, error) {
+func normalizeDocument(value, documentType string) (string, error) {
 	var digits strings.Builder
 	for _, character := range value {
 		if unicode.IsDigit(character) {

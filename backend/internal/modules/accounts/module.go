@@ -14,18 +14,18 @@ type Module struct {
 }
 
 func New(dependencies Dependencies) *Module {
-	repository := NewRepository(dependencies.Postgres)
-	service := NewService(repository)
+	repository := newRepository(dependencies.Postgres)
+	service := newService(repository)
 
 	return &Module{
-		handler: NewHandler(service, repository),
+		handler: newHandler(service, repository),
 	}
 }
 
 func (module *Module) RegisterRoutes(public, admin *gin.RouterGroup) {
-	public.POST("/auth/register", module.handler.Register)
-	admin.GET("/clients", module.handler.ListClients)
-	admin.POST("/clients/:clientId/activate", module.handler.Activate)
-	admin.POST("/clients/:clientId/reject", module.handler.Reject)
-	admin.POST("/clients/:clientId/deactivate", module.handler.Deactivate)
+	public.POST("/auth/register", module.handler.register)
+	admin.GET("/clients", module.handler.listClients)
+	admin.POST("/clients/:clientId/activate", module.handler.activate)
+	admin.POST("/clients/:clientId/reject", module.handler.reject)
+	admin.POST("/clients/:clientId/deactivate", module.handler.deactivate)
 }

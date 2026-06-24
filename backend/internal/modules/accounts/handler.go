@@ -15,11 +15,11 @@ type Handler struct {
 	repository *Repository
 }
 
-func NewHandler(service *Service, repository *Repository) *Handler {
+func newHandler(service *Service, repository *Repository) *Handler {
 	return &Handler{service: service, repository: repository}
 }
 
-func (handler *Handler) Register(ctx *gin.Context) {
+func (handler *Handler) register(ctx *gin.Context) {
 	var request struct {
 		Name          string `json:"name" binding:"required"`
 		DocumentType  string `json:"documentType" binding:"required"`
@@ -31,7 +31,7 @@ func (handler *Handler) Register(ctx *gin.Context) {
 		response.Error(ctx, http.StatusBadRequest, "invalid_request", "Revise os dados informados.", nil)
 		return
 	}
-	clientID, err := handler.service.Register(ctx, request.Name, request.DocumentType, request.DocumentID, request.Password, request.RequestedPlan)
+	clientID, err := handler.service.register(ctx, request.Name, request.DocumentType, request.DocumentID, request.Password, request.RequestedPlan)
 	if errors.Is(err, ErrConflict) {
 		response.Error(ctx, http.StatusConflict, "document_already_registered", "CPF ou CNPJ já cadastrado.", nil)
 		return
@@ -47,8 +47,8 @@ func (handler *Handler) Register(ctx *gin.Context) {
 	})
 }
 
-func (handler *Handler) ListClients(ctx *gin.Context) {
-	clients, err := handler.repository.Clients(ctx, ctx.Query("status"))
+func (handler *Handler) listClients(ctx *gin.Context) {
+	clients, err := handler.repository.clients(ctx, ctx.Query("status"))
 	if err != nil {
 		response.Error(ctx, http.StatusInternalServerError, "internal_error", "Não foi possível listar os clientes.", nil)
 		return
@@ -56,7 +56,7 @@ func (handler *Handler) ListClients(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"items": clients})
 }
 
-func (handler *Handler) Activate(ctx *gin.Context) {
+func (handler *Handler) activate(ctx *gin.Context) {
 	var request struct {
 		PlanType            string `json:"planType" binding:"required"`
 		InitialBalanceCents int64  `json:"initialBalanceCents"`
@@ -72,18 +72,18 @@ func (handler *Handler) Activate(ctx *gin.Context) {
 		return
 	}
 	claims, _ := access.ClaimsFromContext(ctx)
-	err := handler.repository.Activate(ctx, claims.Subject, ctx.Param("clientId"), Activation{
+	err := handler.repository.activate(ctx, claims.Subject, ctx.Param("clientId"), Activation{
 		PlanType: request.PlanType, InitialBalanceCents: request.InitialBalanceCents,
 		PostpaidTotalLimitCents: request.TotalLimitCents,
 	})
 	handler.writeAdminResult(ctx, err)
 }
 
-func (handler *Handler) Reject(ctx *gin.Context) {
+func (handler *Handler) reject(ctx *gin.Context) {
 	handler.changeStatus(ctx, string(domain.ClientStatusRejected))
 }
 
-func (handler *Handler) Deactivate(ctx *gin.Context) {
+func (handler *Handler) deactivate(ctx *gin.Context) {
 	handler.changeStatus(ctx, string(domain.ClientStatusInactive))
 }
 
@@ -96,7 +96,7 @@ func (handler *Handler) changeStatus(ctx *gin.Context, status string) {
 		return
 	}
 	claims, _ := access.ClaimsFromContext(ctx)
-	handler.writeAdminResult(ctx, handler.repository.ChangeStatus(ctx, claims.Subject, ctx.Param("clientId"), status, request.Reason))
+	handler.writeAdminResult(ctx, handler.repository.changeStatus(ctx, claims.Subject, ctx.Param("clientId"), status, request.Reason))
 }
 
 func (handler *Handler) writeAdminResult(ctx *gin.Context, err error) {

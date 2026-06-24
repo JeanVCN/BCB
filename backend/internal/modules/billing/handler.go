@@ -13,13 +13,13 @@ type Handler struct {
 	service *Service
 }
 
-func NewHandler(service *Service) *Handler {
+func newHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func (handler *Handler) Profile(ctx *gin.Context) {
+func (handler *Handler) profile(ctx *gin.Context) {
 	claims, _ := access.ClaimsFromContext(ctx)
-	profile, err := handler.service.Profile(ctx, *claims.ClientID)
+	profile, err := handler.service.profile(ctx, *claims.ClientID)
 	if err != nil {
 		handler.writeError(ctx, err)
 		return
@@ -27,16 +27,16 @@ func (handler *Handler) Profile(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, profile)
 }
 
-func (handler *Handler) ClientTransactions(ctx *gin.Context) {
+func (handler *Handler) clientTransactions(ctx *gin.Context) {
 	claims, _ := access.ClaimsFromContext(ctx)
 	handler.writeTransactions(ctx, *claims.ClientID)
 }
 
-func (handler *Handler) AdminTransactions(ctx *gin.Context) {
+func (handler *Handler) adminTransactions(ctx *gin.Context) {
 	handler.writeTransactions(ctx, ctx.Param("clientId"))
 }
 
-func (handler *Handler) AddCredit(ctx *gin.Context) {
+func (handler *Handler) addCredit(ctx *gin.Context) {
 	var request struct {
 		AmountCents int64  `json:"amountCents" binding:"required"`
 		Reason      string `json:"reason"`
@@ -46,11 +46,11 @@ func (handler *Handler) AddCredit(ctx *gin.Context) {
 		return
 	}
 	claims, _ := access.ClaimsFromContext(ctx)
-	err := handler.service.AddCredit(ctx, claims.Subject, ctx.Param("clientId"), request.AmountCents, request.Reason, ctx.GetHeader("Idempotency-Key"))
+	err := handler.service.addCredit(ctx, claims.Subject, ctx.Param("clientId"), request.AmountCents, request.Reason, ctx.GetHeader("Idempotency-Key"))
 	handler.writeMutationResult(ctx, err)
 }
 
-func (handler *Handler) AdjustPostpaidLimit(ctx *gin.Context) {
+func (handler *Handler) adjustPostpaidLimit(ctx *gin.Context) {
 	var request struct {
 		TotalLimitCents int64  `json:"totalLimitCents"`
 		Reason          string `json:"reason"`
@@ -60,12 +60,12 @@ func (handler *Handler) AdjustPostpaidLimit(ctx *gin.Context) {
 		return
 	}
 	claims, _ := access.ClaimsFromContext(ctx)
-	err := handler.service.AdjustPostpaidLimit(ctx, claims.Subject, ctx.Param("clientId"), request.TotalLimitCents, request.Reason, ctx.GetHeader("Idempotency-Key"))
+	err := handler.service.adjustPostpaidLimit(ctx, claims.Subject, ctx.Param("clientId"), request.TotalLimitCents, request.Reason, ctx.GetHeader("Idempotency-Key"))
 	handler.writeMutationResult(ctx, err)
 }
 
 func (handler *Handler) writeTransactions(ctx *gin.Context, clientID string) {
-	transactions, err := handler.service.Transactions(ctx, clientID)
+	transactions, err := handler.service.transactions(ctx, clientID)
 	if err != nil {
 		handler.writeError(ctx, err)
 		return

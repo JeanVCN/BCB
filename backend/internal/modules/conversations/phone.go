@@ -6,7 +6,7 @@ import (
 	"unicode"
 )
 
-func NormalizePhone(value string) (string, error) {
+func normalizePhone(value string) (string, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return "", errors.New("phone is required")

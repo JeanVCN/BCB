@@ -20,12 +20,12 @@ func New(dependencies Dependencies) *Module {
 	locks := billing.NewLockManager(dependencies.Redis)
 	billingService := billing.NewService(billing.NewRepository(dependencies.Postgres), locks)
 	repository := NewRepository(dependencies.Postgres, billingService)
-	service := NewService(repository, locks)
+	service := newService(repository, locks)
 
-	return &Module{handler: NewHandler(service)}
+	return &Module{handler: newHandler(service)}
 }
 
 func (module *Module) RegisterRoutes(client *gin.RouterGroup) {
-	client.GET("/conversations/:conversationId/messages", module.handler.List)
-	client.POST("/conversations/:conversationId/messages", module.handler.Send)
+	client.GET("/conversations/:conversationId/messages", module.handler.list)
+	client.POST("/conversations/:conversationId/messages", module.handler.send)
 }

@@ -20,14 +20,14 @@ func New(dependencies Dependencies) *Module {
 	locks := NewLockManager(dependencies.Redis)
 	service := NewService(repository, locks)
 
-	return &Module{handler: NewHandler(service)}
+	return &Module{handler: newHandler(service)}
 }
 
 func (module *Module) RegisterRoutes(admin, client *gin.RouterGroup) {
-	client.GET("/billing", module.handler.Profile)
-	client.GET("/billing/transactions", module.handler.ClientTransactions)
+	client.GET("/billing", module.handler.profile)
+	client.GET("/billing/transactions", module.handler.clientTransactions)
 
-	admin.POST("/admin/clients/:clientId/credits", module.handler.AddCredit)
-	admin.PUT("/admin/clients/:clientId/postpaid-limit", module.handler.AdjustPostpaidLimit)
-	admin.GET("/admin/clients/:clientId/financial-transactions", module.handler.AdminTransactions)
+	admin.POST("/admin/clients/:clientId/credits", module.handler.addCredit)
+	admin.PUT("/admin/clients/:clientId/postpaid-limit", module.handler.adjustPostpaidLimit)
+	admin.GET("/admin/clients/:clientId/financial-transactions", module.handler.adminTransactions)
 }

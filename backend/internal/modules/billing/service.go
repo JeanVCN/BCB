@@ -22,11 +22,11 @@ func NewService(repository *Repository, locks *LockManager) *Service {
 	return &Service{repository: repository, locks: locks}
 }
 
-func (service *Service) Profile(ctx context.Context, clientID string) (Profile, error) {
+func (service *Service) profile(ctx context.Context, clientID string) (Profile, error) {
 	return service.repository.profile(ctx, clientID)
 }
 
-func (service *Service) Transactions(ctx context.Context, clientID string) ([]Transaction, error) {
+func (service *Service) transactions(ctx context.Context, clientID string) ([]Transaction, error) {
 	return service.repository.transactions(ctx, clientID)
 }
 
@@ -42,7 +42,7 @@ func (service *Service) ProfileInTransaction(ctx context.Context, tx pgx.Tx, cli
 	return service.repository.profileInTransaction(ctx, tx, clientID)
 }
 
-func (service *Service) AddCredit(ctx context.Context, actorID, clientID string, amountCents int64, reason, idempotencyKey string) error {
+func (service *Service) addCredit(ctx context.Context, actorID, clientID string, amountCents int64, reason, idempotencyKey string) error {
 	if err := validatePositiveMutation(amountCents, idempotencyKey); err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (service *Service) AddCredit(ctx context.Context, actorID, clientID string,
 	})
 }
 
-func (service *Service) AdjustPostpaidLimit(ctx context.Context, actorID, clientID string, totalLimitCents int64, reason, idempotencyKey string) error {
+func (service *Service) adjustPostpaidLimit(ctx context.Context, actorID, clientID string, totalLimitCents int64, reason, idempotencyKey string) error {
 	if err := validateNonNegativeMutation(totalLimitCents, idempotencyKey); err != nil {
 		return err
 	}

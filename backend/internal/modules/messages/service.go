@@ -13,11 +13,11 @@ type Service struct {
 	locks      *billing.LockManager
 }
 
-func NewService(repository *Repository, locks *billing.LockManager) *Service {
+func newService(repository *Repository, locks *billing.LockManager) *Service {
 	return &Service{repository: repository, locks: locks}
 }
 
-func (service *Service) Send(ctx context.Context, clientID, requestedByUserID, conversationID, content, channel, priority, idempotencyKey string) (SendResult, error) {
+func (service *Service) send(ctx context.Context, clientID, requestedByUserID, conversationID, content, channel, priority, idempotencyKey string) (SendResult, error) {
 	content = strings.TrimSpace(content)
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
 	parsedChannel, validChannel := parseChannel(channel)
@@ -44,7 +44,7 @@ func (service *Service) Send(ctx context.Context, clientID, requestedByUserID, c
 	var result SendResult
 	err := service.locks.WithClientLock(ctx, clientID, func() error {
 		var err error
-		result, err = service.repository.Send(ctx, command)
+		result, err = service.repository.send(ctx, command)
 		if errors.Is(err, ErrAlreadyProcessed) {
 			return nil
 		}
@@ -53,6 +53,6 @@ func (service *Service) Send(ctx context.Context, clientID, requestedByUserID, c
 	return result, err
 }
 
-func (service *Service) List(ctx context.Context, clientID, conversationID string) ([]Message, error) {
-	return service.repository.List(ctx, clientID, conversationID)
+func (service *Service) list(ctx context.Context, clientID, conversationID string) ([]Message, error) {
+	return service.repository.list(ctx, clientID, conversationID)
 }

@@ -35,7 +35,7 @@ func NewRepository(pool *pgxpool.Pool, billing BillingGateway) *Repository {
 	return &Repository{pool: pool, billing: billing}
 }
 
-func (repository *Repository) Send(ctx context.Context, command SendCommand) (SendResult, error) {
+func (repository *Repository) send(ctx context.Context, command SendCommand) (SendResult, error) {
 	tx, err := repository.pool.Begin(ctx)
 	if err != nil {
 		return SendResult{}, fmt.Errorf("begin send message: %w", err)
@@ -94,7 +94,7 @@ func (repository *Repository) Send(ctx context.Context, command SendCommand) (Se
 	return SendResult{Message: message, Billing: summaryFromBillingProfile(charge.Profile)}, nil
 }
 
-func (repository *Repository) List(ctx context.Context, clientID, conversationID string) ([]Message, error) {
+func (repository *Repository) list(ctx context.Context, clientID, conversationID string) ([]Message, error) {
 	if err := repository.ensureActiveClient(ctx, clientID); err != nil {
 		return nil, err
 	}

@@ -22,11 +22,11 @@ type Repository struct {
 	pool *pgxpool.Pool
 }
 
-func NewRepository(pool *pgxpool.Pool) *Repository {
+func newRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
-func (repository *Repository) Register(ctx context.Context, registration Registration) (string, error) {
+func (repository *Repository) register(ctx context.Context, registration Registration) (string, error) {
 	tx, err := repository.pool.Begin(ctx)
 	if err != nil {
 		return "", fmt.Errorf("begin registration: %w", err)
@@ -61,7 +61,7 @@ func (repository *Repository) Register(ctx context.Context, registration Registr
 	return clientID, nil
 }
 
-func (repository *Repository) Clients(ctx context.Context, status string) ([]Client, error) {
+func (repository *Repository) clients(ctx context.Context, status string) ([]Client, error) {
 	rows, err := repository.pool.Query(ctx, `
 		SELECT id, name, document_type, document, status, requested_plan, status_reason, created_at
 		FROM client_accounts
@@ -83,7 +83,7 @@ func (repository *Repository) Clients(ctx context.Context, status string) ([]Cli
 	return clients, rows.Err()
 }
 
-func (repository *Repository) Activate(ctx context.Context, actorID, clientID string, activation Activation) error {
+func (repository *Repository) activate(ctx context.Context, actorID, clientID string, activation Activation) error {
 	tx, err := repository.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin activation: %w", err)
@@ -130,7 +130,7 @@ func (repository *Repository) Activate(ctx context.Context, actorID, clientID st
 	return tx.Commit(ctx)
 }
 
-func (repository *Repository) ChangeStatus(ctx context.Context, actorID, clientID, targetStatus, reason string) error {
+func (repository *Repository) changeStatus(ctx context.Context, actorID, clientID, targetStatus, reason string) error {
 	tx, err := repository.pool.Begin(ctx)
 	if err != nil {
 		return err

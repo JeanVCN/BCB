@@ -49,6 +49,10 @@
 - Enumerações de domínio são centralizadas no backend em `internal/domain` e
   espelhadas no frontend em `frontend/src/domain.ts`; comparações diretas com
   strings soltas devem ser evitadas.
+- No backend Go, funções e métodos devem permanecer não exportados sempre que
+  forem usados apenas dentro do próprio pacote. A letra maiúscula fica reservada
+  para fronteiras reais entre pacotes, contratos externos e exigências da
+  linguagem, como testes `Test...`.
 - O worker de mensagens roda em processo/serviço independente da API e consome
   `dispatch_jobs` no PostgreSQL com `FOR UPDATE SKIP LOCKED`; ele ainda usa a
   lógica do módulo `messages`, preservando coesão de domínio.

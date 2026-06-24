@@ -376,6 +376,10 @@ Somente depois do essencial estar estável, avaliar:
 - Comparações de enumerações do domínio não devem usar strings soltas. Backend
   deve centralizar esses valores em `internal/domain`; frontend deve espelhá-los
   em `src/domain.ts`.
+- Funções e métodos em Go só devem ser exportados quando forem fronteiras reais
+  entre pacotes, contratos externos ou exigências da linguagem, como testes
+  `Test...`. Handlers, services e repositories usados apenas dentro do próprio
+  pacote devem permanecer não exportados.
 
 ## Pendências abertas
 

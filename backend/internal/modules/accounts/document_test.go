@@ -15,19 +15,19 @@ func TestNormalizeDocument(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := NormalizeDocument(test.value, test.documentType)
+			got, err := normalizeDocument(test.value, test.documentType)
 			if err != nil {
-				t.Fatalf("NormalizeDocument() error = %v", err)
+				t.Fatalf("normalizeDocument() error = %v", err)
 			}
 			if got != test.want {
-				t.Fatalf("NormalizeDocument() = %q, want %q", got, test.want)
+				t.Fatalf("normalizeDocument() = %q, want %q", got, test.want)
 			}
 		})
 	}
 }
 
 func TestNormalizeDocumentRejectsInvalidValue(t *testing.T) {
-	if _, err := NormalizeDocument("111.111.111-11", string(domain.DocumentCPF)); err == nil {
-		t.Fatal("NormalizeDocument() error = nil, want invalid CPF")
+	if _, err := normalizeDocument("111.111.111-11", string(domain.DocumentCPF)); err == nil {
+		t.Fatal("normalizeDocument() error = nil, want invalid CPF")
 	}
 }

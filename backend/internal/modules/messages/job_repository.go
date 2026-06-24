@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (repository *Repository) ClaimNextJob(ctx context.Context, workerID string) (dispatchJob, bool, error) {
+func (repository *Repository) claimNextJob(ctx context.Context, workerID string) (dispatchJob, bool, error) {
 	tx, err := repository.pool.Begin(ctx)
 	if err != nil {
 		return dispatchJob{}, false, fmt.Errorf("begin claim job: %w", err)
@@ -50,7 +50,7 @@ func (repository *Repository) ClaimNextJob(ctx context.Context, workerID string)
 	return job, true, nil
 }
 
-func (repository *Repository) CompleteJob(ctx context.Context, job dispatchJob) error {
+func (repository *Repository) completeJob(ctx context.Context, job dispatchJob) error {
 	return repository.finishJob(ctx, job, jobFinish{
 		AttemptOutcome: domain.DeliveryAttemptSent,
 		MessageStatus:  domain.MessageStatusSent,
@@ -58,7 +58,7 @@ func (repository *Repository) CompleteJob(ctx context.Context, job dispatchJob) 
 	})
 }
 
-func (repository *Repository) RetryJob(ctx context.Context, job dispatchJob, nextRetryAt time.Time, errorCode string) error {
+func (repository *Repository) retryJob(ctx context.Context, job dispatchJob, nextRetryAt time.Time, errorCode string) error {
 	tx, err := repository.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin retry job: %w", err)
@@ -89,7 +89,7 @@ func (repository *Repository) RetryJob(ctx context.Context, job dispatchJob, nex
 	return tx.Commit(ctx)
 }
 
-func (repository *Repository) FailJob(ctx context.Context, job dispatchJob, outcome, errorCode string) error {
+func (repository *Repository) failJob(ctx context.Context, job dispatchJob, outcome, errorCode string) error {
 	return repository.finishJob(ctx, job, jobFinish{
 		AttemptOutcome: domain.DeliveryAttemptOutcome(outcome),
 		MessageStatus:  domain.MessageStatusFailed,
