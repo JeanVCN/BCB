@@ -46,6 +46,8 @@ não define endpoints, banco de dados ou estrutura de código.
 - [x] Administrador consegue adicionar crédito ao pré-pago.
 - [x] Administrador consegue alterar o limite total do pós-pago sem apagar seu
   consumo acumulado.
+- [x] Administrador consegue zerar saldo pré-pago ou consumo pós-pago para
+  liberar a solicitação de mudança de plano quando aplicável.
 - [x] Saldo, limite total, consumo e disponibilidade são apresentados de forma
   coerente com o plano.
 - [x] Toda alteração financeira cria histórico rastreável.

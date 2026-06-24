@@ -441,6 +441,12 @@ function AdminDashboard({ session, onLogout }: { session: Session; onLogout: () 
   }
 
   async function addCredit(client: Client) {
+    const billing = await loadAdminBilling(client)
+    if (!billing) return
+    if (billing.planType !== plans.prepaid) {
+      setError('Crédito administrativo está disponível apenas para clientes pré-pagos.')
+      return
+    }
     const amount = Number(prompt('Valor do crédito em centavos', '1000'))
     if (!Number.isSafeInteger(amount) || amount <= 0) return
     const reason = prompt('Motivo da recarga')?.trim() ?? ''
@@ -453,11 +459,42 @@ function AdminDashboard({ session, onLogout }: { session: Session; onLogout: () 
   }
 
   async function setPostpaidLimit(client: Client) {
+    const billing = await loadAdminBilling(client)
+    if (!billing) return
+    if (billing.planType !== plans.postpaid) {
+      setError('Ajuste de limite está disponível apenas para clientes pós-pagos.')
+      return
+    }
     const amount = Number(prompt('Novo limite total em centavos', '5000'))
     if (!Number.isSafeInteger(amount) || amount <= 0) return
     const reason = prompt('Motivo do ajuste')?.trim() ?? ''
     try {
       await api.setPostpaidLimit(token, client.id, { totalLimitCents: amount, reason }, idempotencyKey())
+      await refresh()
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Erro inesperado.')
+    }
+  }
+
+  async function loadAdminBilling(client: Client) {
+    try {
+      return await api.adminBilling(token, client.id)
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Erro inesperado.')
+      return null
+    }
+  }
+
+  async function zeroCurrentBalance(client: Client) {
+    const billing = await loadAdminBilling(client)
+    if (!billing) return
+    const currentAmount = billing.planType === plans.prepaid ? billing.prepaidBalanceCents : billing.postpaidConsumedCents
+    const actionLabel = billing.planType === plans.prepaid ? 'saldo pré-pago' : 'consumo pós-pago'
+    const confirmed = window.confirm(`Zerar ${actionLabel} de ${client.name}? Valor atual: ${formatMoney(currentAmount)}.`)
+    if (!confirmed) return
+    const reason = prompt('Motivo do zeramento')?.trim() ?? ''
+    try {
+      await api.zeroCurrentBalance(token, client.id, { reason }, idempotencyKey())
       await refresh()
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Erro inesperado.')
@@ -534,7 +571,7 @@ function AdminDashboard({ session, onLogout }: { session: Session; onLogout: () 
         ))}
       </section>
       <section className="client-list">
-        {clients.length === 0 ? <div className="empty-state"><h2>Nenhum cadastro</h2><p>Novas solicitações aparecerão aqui.</p></div> : clients.map(client => <article key={client.id} className="client-card"><div><span className={`pill ${client.status}`}>{client.status}</span><h2>{client.name}</h2><p>{client.documentType.toUpperCase()} · {client.documentId}</p><small>Plano solicitado: {client.requestedPlan === plans.prepaid ? 'Pré-pago' : 'Pós-pago'}</small></div><div className="actions">{client.status !== clientStatuses.active ? <><button className="primary" onClick={() => void activate(client)}>Ativar</button>{client.status === clientStatuses.pending && <button onClick={() => void reject(client)}>Rejeitar</button>}</> : <><button className="primary" onClick={() => client.requestedPlan === plans.prepaid ? void addCredit(client) : void setPostpaidLimit(client)}>{client.requestedPlan === plans.prepaid ? 'Adicionar crédito' : 'Ajustar limite'}</button><button onClick={() => void showTransactions(client)}>Histórico</button></>}</div></article>)}
+        {clients.length === 0 ? <div className="empty-state"><h2>Nenhum cadastro</h2><p>Novas solicitações aparecerão aqui.</p></div> : clients.map(client => <article key={client.id} className="client-card"><div><span className={`pill ${client.status}`}>{client.status}</span><h2>{client.name}</h2><p>{client.documentType.toUpperCase()} · {client.documentId}</p><small>Plano solicitado: {client.requestedPlan === plans.prepaid ? 'Pré-pago' : 'Pós-pago'}</small></div><div className="actions">{client.status !== clientStatuses.active ? <><button className="primary" onClick={() => void activate(client)}>Ativar</button>{client.status === clientStatuses.pending && <button onClick={() => void reject(client)}>Rejeitar</button>}</> : <><button className="primary" onClick={() => void addCredit(client)}>Adicionar crédito</button><button onClick={() => void setPostpaidLimit(client)}>Ajustar limite</button><button onClick={() => void zeroCurrentBalance(client)}>Zerar saldo/consumo</button><button onClick={() => void showTransactions(client)}>Histórico</button></>}</div></article>)}
       </section>
     </main>
   )

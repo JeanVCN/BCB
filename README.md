@@ -46,6 +46,8 @@ cadastro/login -> conversas -> envio de mensagem -> fila/worker -> status -> fin
 - Retry de falhas transitórias e estorno idempotente em falhas definitivas.
 - Histórico financeiro para cliente e administrador.
 - Crédito pré-pago e ajuste de limite pós-pago por administrador.
+- Zeramento administrativo de saldo pré-pago ou consumo pós-pago para liberar
+  solicitação de mudança de plano.
 - Solicitação de mudança de plano pelo cliente e aprovação/rejeição pelo admin.
 - Interface responsiva com estados de carregamento, vazio, erro e sucesso.
 
@@ -189,6 +191,7 @@ docker compose down -v
 11. Para testar mudança de plano:
     - Pré-pago só solicita mudança com saldo igual a zero.
     - Pós-pago só solicita mudança com consumo igual a zero.
+    - Se necessário, o admin pode zerar saldo/consumo pelo painel.
     - O admin aprova ou rejeita pelo painel administrativo.
 
 ## Verificações por terminal
@@ -261,8 +264,10 @@ npm run build
 | `POST` | `/api/v1/plan-change-requests` | Solicitar mudança de plano |
 | `GET` | `/api/v1/admin/clients` | Listar clientes para admin |
 | `POST` | `/api/v1/admin/clients/{id}/activate` | Ativar cliente |
+| `GET` | `/api/v1/admin/clients/{id}/billing` | Consultar financeiro do cliente |
 | `POST` | `/api/v1/admin/clients/{id}/credits` | Adicionar crédito |
 | `PUT` | `/api/v1/admin/clients/{id}/postpaid-limit` | Ajustar limite pós-pago |
+| `POST` | `/api/v1/admin/clients/{id}/zero-balance` | Zerar saldo/consumo |
 | `GET` | `/api/v1/admin/plan-change-requests` | Listar mudanças de plano |
 
 Envio de mensagem e mutações financeiras administrativas usam

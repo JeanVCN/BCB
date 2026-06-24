@@ -138,9 +138,17 @@ export const api = {
       method: 'POST', body: JSON.stringify(body), headers: { 'Idempotency-Key': idempotencyKey },
     }, token,
   ),
+  adminBilling: (token: string, clientId: string) => request<BillingProfile>(
+    `/admin/clients/${clientId}/billing`, {}, token,
+  ),
   setPostpaidLimit: (token: string, clientId: string, body: object, idempotencyKey: string) => request<void>(
     `/admin/clients/${clientId}/postpaid-limit`, {
       method: 'PUT', body: JSON.stringify(body), headers: { 'Idempotency-Key': idempotencyKey },
+    }, token,
+  ),
+  zeroCurrentBalance: (token: string, clientId: string, body: object, idempotencyKey: string) => request<void>(
+    `/admin/clients/${clientId}/zero-balance`, {
+      method: 'POST', body: JSON.stringify(body), headers: { 'Idempotency-Key': idempotencyKey },
     }, token,
   ),
   adminFinancialTransactions: (token: string, clientId: string) => request<{ items: FinancialTransaction[] }>(

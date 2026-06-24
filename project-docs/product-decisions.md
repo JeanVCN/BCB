@@ -8,7 +8,8 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 
 - Data da consolidação: 2026-06-24.
 - Fase: fluxo principal de conversa, envio, cobrança, fila simples, worker,
-  retry, estorno e mudança de plano implementados localmente.
+  retry, estorno, financeiro administrativo auxiliar e mudança de plano
+  implementados localmente.
 - Próxima fase recomendada: validação ponta a ponta, testes específicos,
   polimento de UX, responsividade e revisão de segurança operacional.
 
@@ -64,6 +65,7 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Migration automática | `RUN_MIGRATIONS=true` por padrão, configurável | Facilitar avaliação local sem impedir operação controlada por pipeline |
 | Idempotência financeira | Tabela genérica de registros idempotentes para mutações administrativas | Reaproveitar a proteção em crédito e ajuste de limite sem confundir limite com movimentação financeira |
 | Ajuste de limite | Registrar em auditoria, não como transação financeira | Limite não movimenta dinheiro; transações ficam reservadas a crédito, débito, consumo e estorno |
+| Zeramento para troca de plano | Permitir que admin zere saldo pré-pago ou consumo pós-pago com idempotência e auditoria | Desbloquear a solicitação de mudança de plano durante operação/demonstração sem alterar a regra de que o cliente só solicita quando não há pendência financeira |
 | Worker de mensagens | Rodar como serviço independente da API, consumindo jobs persistentes no PostgreSQL | Evitar acoplar o processamento de disparos ao ciclo de atualização do serviço HTTP |
 | Simulação de envio | Sucesso por padrão; `[fail]` força falha permanente; `[retry]` força falha transitória até estorno | Permitir demonstrar sucesso, retry e estorno sem custo de provedor externo |
 | Constantes de domínio | Centralizar no backend e espelhar no frontend | Reduzir comparação insegura de strings sem introduzir tabelas auxiliares prematuras |
@@ -117,12 +119,15 @@ O escopo inclui:
 - consultar histórico de transações;
 - converter planos preservando a rastreabilidade financeira.
 
-Na implementação atual, crédito pré-pago e ajuste de limite pós-pago já estão
-disponíveis para administradores e exigem `Idempotency-Key`. Créditos geram
-registros imutáveis em `financial_transactions`; ajustes de limite são
-auditados em `audit_events`, porque não representam entrada, saída ou reversão
-de dinheiro. A conversão de plano é executada pelo workflow de solicitação de
-mudança de plano, com decisão administrativa e auditoria.
+Na implementação atual, crédito pré-pago, ajuste de limite pós-pago e
+zeramento administrativo de saldo/consumo estão disponíveis para
+administradores e exigem `Idempotency-Key`. Créditos geram registros imutáveis
+em `financial_transactions`; ajustes de limite são auditados em `audit_events`,
+porque não representam entrada, saída ou reversão de dinheiro. Zeramentos
+administrativos são auditados e, quando compensam valor existente, geram
+`debit` para saldo pré-pago ou `consumption_reversal` para consumo pós-pago.
+A conversão de plano é executada pelo workflow de solicitação de mudança de
+plano, com decisão administrativa e auditoria.
 
 ### Mudança de plano
 
@@ -134,6 +139,9 @@ mudança de plano, com decisão administrativa e auditoria.
 - Os estados da solicitação são `pending`, `approved`, `rejected` e `cancelled`.
 - O cliente pode cancelar a solicitação enquanto ela estiver pendente.
 - O administrador pode aprovar ou rejeitar a solicitação.
+- O administrador pode zerar saldo pré-pago ou consumo pós-pago antes da
+  solicitação quando a operação fizer sentido para desbloquear a regra de
+  ausência de pendência financeira.
 - A aprovação deve revalidar a situação financeira e as permissões no momento
   da alteração.
 - Solicitação e todas as transições posteriores devem registrar auditoria.
@@ -343,3 +351,6 @@ Não há definição funcional bloqueante para iniciar a implementação.
 - Reescrito o README principal como documento de entrega do desafio,
   concentrando descrição, premissas, tecnologias, execução, roteiro de teste,
   endpoints principais, decisões técnicas, limitações e links úteis.
+- Adicionada ação administrativa para consultar o perfil financeiro vigente do
+  cliente e zerar saldo pré-pago ou consumo pós-pago, mantendo idempotência,
+  auditoria e registro financeiro compensatório quando houver valor a zerar.

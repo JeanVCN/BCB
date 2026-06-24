@@ -32,6 +32,15 @@ func (handler *Handler) clientTransactions(ctx *gin.Context) {
 	handler.writeTransactions(ctx, *claims.ClientID)
 }
 
+func (handler *Handler) adminProfile(ctx *gin.Context) {
+	profile, err := handler.service.profile(ctx, ctx.Param("clientId"))
+	if err != nil {
+		handler.writeError(ctx, err)
+		return
+	}
+	ctx.JSON(http.StatusOK, profile)
+}
+
 func (handler *Handler) adminTransactions(ctx *gin.Context) {
 	handler.writeTransactions(ctx, ctx.Param("clientId"))
 }
@@ -61,6 +70,19 @@ func (handler *Handler) adjustPostpaidLimit(ctx *gin.Context) {
 	}
 	claims, _ := access.ClaimsFromContext(ctx)
 	err := handler.service.adjustPostpaidLimit(ctx, claims.Subject, ctx.Param("clientId"), request.TotalLimitCents, request.Reason, ctx.GetHeader("Idempotency-Key"))
+	handler.writeMutationResult(ctx, err)
+}
+
+func (handler *Handler) zeroCurrentBalance(ctx *gin.Context) {
+	var request struct {
+		Reason string `json:"reason"`
+	}
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, http.StatusBadRequest, "invalid_request", "Informe os dados do zeramento.", nil)
+		return
+	}
+	claims, _ := access.ClaimsFromContext(ctx)
+	err := handler.service.zeroCurrentBalance(ctx, claims.Subject, ctx.Param("clientId"), request.Reason, ctx.GetHeader("Idempotency-Key"))
 	handler.writeMutationResult(ctx, err)
 }
 

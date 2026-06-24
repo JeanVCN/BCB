@@ -95,6 +95,8 @@ Invariantes:
 - disponibilidade pós-paga = limite total − consumo;
 - consumo nunca pode superar o limite total durante nova cobrança;
 - alterar limite não altera consumo;
+- zeramento administrativo de saldo pré-pago ou consumo pós-pago deve ser
+  auditado e protegido por idempotência;
 - apenas os campos do plano vigente podem financiar uma mensagem;
 - toda mutação deve possuir transação financeira correspondente.
 
@@ -114,8 +116,10 @@ Razão imutável das movimentações financeiras.
 | Idempotency key | Impede repetição do mesmo efeito |
 | Created at | Imutável |
 
-Ajustes de limite, mudanças de plano e ativações pertencem à auditoria,
-mesmo quando não movimentam dinheiro.
+Ajustes de limite, mudanças de plano e ativações pertencem à auditoria, mesmo
+quando não movimentam dinheiro. Zeramentos administrativos também são auditados;
+quando compensam valor existente, geram transação financeira de débito
+pré-pago ou reversão de consumo pós-pago.
 
 ### 3.5 Recipient
 
@@ -258,6 +262,7 @@ sendo a garantia final de consistência.
 | Solicitar/cancelar mudança | Não | Sim | Não |
 | Consultar/ativar/inativar clientes | Não | Não | Sim |
 | Administrar financeiro | Não | Não | Sim |
+| Zerar saldo/consumo financeiro | Não | Não | Sim |
 | Decidir mudança de plano | Não | Não | Sim |
 | Consultar auditoria administrativa | Não | Não | Sim |
 

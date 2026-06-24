@@ -166,6 +166,11 @@ primeiro escopo.
 
 Retorna cadastro, estado, plano, resumo financeiro e histórico administrativo.
 
+### GET `/admin/clients/{clientId}/billing`
+
+Retorna o perfil financeiro vigente do cliente ativo para orientar ações
+administrativas.
+
 ### POST `/admin/clients/{clientId}/activate`
 
 Confirma o plano e define a condição financeira inicial.
@@ -233,6 +238,20 @@ Exige `Idempotency-Key` e plano pós-pago.
 ```
 
 O novo limite não pode ser inferior ao consumo atual.
+
+### POST `/admin/clients/{clientId}/zero-balance`
+
+Exige `Idempotency-Key`. Zera o saldo pré-pago quando o plano vigente for
+pré-pago ou o consumo acumulado quando o plano vigente for pós-pago.
+
+```json
+{
+  "reason": "Preparação para mudança de plano"
+}
+```
+
+Quando houver valor a compensar, a operação registra transação financeira
+compatível com o plano e sempre registra auditoria administrativa.
 
 ### GET `/admin/clients/{clientId}/financial-transactions`
 

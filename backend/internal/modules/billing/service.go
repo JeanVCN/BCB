@@ -78,6 +78,23 @@ func (service *Service) adjustPostpaidLimit(ctx context.Context, actorID, client
 	})
 }
 
+func (service *Service) zeroCurrentBalance(ctx context.Context, actorID, clientID, reason, idempotencyKey string) error {
+	if strings.TrimSpace(idempotencyKey) == "" {
+		return ErrMissingIdempotencyKey
+	}
+	reason = strings.TrimSpace(reason)
+	hash := RequestHash("admin.zero_current_balance", struct {
+		Reason string `json:"reason"`
+	}{Reason: reason})
+	return service.locks.WithClientLock(ctx, clientID, func() error {
+		err := service.repository.zeroCurrentBalance(ctx, actorID, clientID, reason, strings.TrimSpace(idempotencyKey), hash)
+		if errors.Is(err, ErrAlreadyProcessed) {
+			return nil
+		}
+		return err
+	})
+}
+
 func validatePositiveMutation(amountCents int64, idempotencyKey string) error {
 	if amountCents <= 0 {
 		return ErrInvalidAmount

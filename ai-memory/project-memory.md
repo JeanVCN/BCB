@@ -9,9 +9,10 @@
 - Projeto: Big Chat Brasil (BCB), desafio técnico Fullstack.
 - Última consolidação: 2026-06-24.
 - Estado atual: cadastro, ativação, RBAC, autenticação, destinatários,
-  conversas, financeiro administrativo básico e envio de mensagens com
-  cobrança, fila persistente, worker, retry, estorno e solicitação de mudança
-  de plano implementados localmente.
+  conversas, financeiro administrativo básico, zeramento administrativo de
+  saldo/consumo para troca de plano e envio de mensagens com cobrança, fila
+  persistente, worker, retry, estorno e solicitação de mudança de plano
+  implementados localmente.
 - Fonte inicial: documentos oficiais locais em `docs/` e definições do
   responsável pelo projeto.
 
@@ -250,13 +251,18 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
   exclusivamente do lock.
 - O financeiro administrativo básico foi implementado antes do envio de
   mensagens: cliente consulta resumo e histórico; administrador adiciona
-  crédito pré-pago e ajusta limite pós-pago.
+  crédito pré-pago, ajusta limite pós-pago e zera saldo pré-pago ou consumo
+  pós-pago para permitir que o cliente solicite mudança de plano quando
+  necessário.
 - Mutações financeiras administrativas exigem `Idempotency-Key`. A repetição
   da mesma chave com o mesmo corpo não reaplica o efeito; a mesma chave com
   corpo diferente retorna conflito.
 - Créditos pré-pagos geram `financial_transactions` do tipo `credit`.
 - Ajustes de limite pós-pago não entram como transação financeira porque não
   movimentam dinheiro; eles são registrados em `audit_events`.
+- Zeramentos administrativos exigem `Idempotency-Key`, usam lock Redis e são
+  auditados. Quando há valor a compensar, saldo pré-pago zerado gera transação
+  `debit` e consumo pós-pago zerado gera `consumption_reversal`.
 - Redis bloqueia mutações financeiras por empresa durante a operação, e o
   PostgreSQL mantém transação, constraints e idempotência como garantia final.
 
@@ -350,6 +356,10 @@ Somente depois do essencial estar estável, avaliar:
 - O admin já pode ajustar limite pós-pago por
   `/api/v1/admin/clients/{clientId}/postpaid-limit`, impedindo limite menor
   que o consumo atual.
+- O admin já pode consultar o perfil financeiro vigente de um cliente ativo por
+  `/api/v1/admin/clients/{clientId}/billing` e zerar o saldo pré-pago ou o
+  consumo pós-pago por `/api/v1/admin/clients/{clientId}/zero-balance`, com
+  idempotência, auditoria e registro financeiro compensatório quando aplicável.
 - O admin já consulta histórico financeiro por
   `/api/v1/admin/clients/{clientId}/financial-transactions`.
 - O frontend já apresenta resumo financeiro para o cliente, histórico

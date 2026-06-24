@@ -33,8 +33,8 @@
 ## Limites desta etapa
 
 - O financeiro administrativo básico foi implementado: consulta de resumo,
-  histórico, crédito pré-pago, ajuste de limite pós-pago, idempotência e lock
-  Redis por empresa.
+  histórico, crédito pré-pago, ajuste de limite pós-pago, zeramento de
+  saldo/consumo para troca de plano, idempotência e lock Redis por empresa.
 - Cobrança por mensagem, estorno e reversão de consumo foram implementados no
   módulo `billing` e são chamados pelo módulo `messages` durante o caso de uso
   de envio.
