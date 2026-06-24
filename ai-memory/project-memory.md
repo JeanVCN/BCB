@@ -103,6 +103,11 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
   financeiros devem ficar centralizadas no backend em `internal/domain` e
   espelhadas no frontend em `src/domain.ts`. Um gerador/schema comum pode ser
   adotado futuramente se o custo compensar.
+- A arquitetura do frontend deve permanecer simples e justificável para uma
+  aplicação React de pequeno/médio porte: `App.tsx` fica como composição por
+  sessão/papel; telas e fluxos ficam em `src/features`; componentes
+  reutilizáveis em `src/components`; tipos de UI em `src/types`; helpers puros
+  em `src/utils`; integração HTTP permanece centralizada em `src/api.ts`.
 - A persistência dos contextos usa o nome `Repository`, não `Store`, por
   representar a abstração de acesso ao agregado/dados do domínio.
 - A camada `httpserver` contém apenas roteador, middlewares e helpers de
@@ -427,6 +432,11 @@ Somente depois do essencial estar estável, avaliar:
 - O frontend passou por ajuste responsivo em CSS, removendo escala
   tipográfica por viewport, letter-spacing negativo e riscos de overflow em
   IDs, telefones, mensagens e ações administrativas.
+- Em 2026-06-24, por solicitação do responsável do projeto, o frontend foi
+  reorganizado para reduzir concentração em `App.tsx`: autenticação,
+  dashboard administrativo, área do cliente, chat, métricas, histórico,
+  modais, notificações, layout, tipos de UI e utilitários passaram a ficar em
+  módulos próprios sem criar uma arquitetura excessivamente complexa.
 
 ## Pendências abertas
 

@@ -69,6 +69,7 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Worker de mensagens | Rodar como serviço independente da API, consumindo jobs persistentes no PostgreSQL | Evitar acoplar o processamento de disparos ao ciclo de atualização do serviço HTTP |
 | Simulação de envio | Sucesso por padrão; `[fail]` força falha permanente; `[retry]` força falha transitória até estorno | Permitir demonstrar sucesso, retry e estorno sem custo de provedor externo |
 | Constantes de domínio | Centralizar no backend e espelhar no frontend | Reduzir comparação insegura de strings sem introduzir tabelas auxiliares prematuras |
+| Arquitetura frontend | Organizar React em `features`, `components`, `types` e `utils`, mantendo `App.tsx` como composição por sessão/papel e `api.ts` como integração HTTP centralizada | Melhorar legibilidade, manutenção e apresentação técnica sem overengineering |
 | Fronteira financeiro/mensagens | `messages` orquestra o envio; `billing` executa cobrança e estorno usando a mesma transação | Preservar atomicidade sem espalhar regra financeira no domínio de mensagens |
 | Dependência entre domínios | `messages` consome uma interface do service de `billing`, não o repository concreto | Compartilhar regra de negócio pela camada correta e manter persistência encapsulada no domínio financeiro |
 | Organização do repository financeiro | Manter o núcleo transacional em `repository.go` e dividir auxiliares em poucos arquivos temáticos | Melhorar navegação sem deixar o arquivo principal vazio nem transformar o pacote em microarquivos |
@@ -354,3 +355,9 @@ Não há definição funcional bloqueante para iniciar a implementação.
 - Adicionada ação administrativa para consultar o perfil financeiro vigente do
   cliente e zerar saldo pré-pago ou consumo pós-pago, mantendo idempotência,
   auditoria e registro financeiro compensatório quando houver valor a zerar.
+- Reorganizado o frontend em módulos simples e justificáveis para uma
+  aplicação React de pequeno/médio porte: autenticação, área do cliente,
+  dashboard administrativo, chat, métricas, histórico, modais, notificações,
+  layout, tipos de UI e utilitários foram separados de `App.tsx`, que passou a
+  atuar apenas como composição por sessão/papel. Decisão solicitada pelo
+  responsável do projeto em 2026-06-24.
