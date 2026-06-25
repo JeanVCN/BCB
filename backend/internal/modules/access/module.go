@@ -19,6 +19,7 @@ type Module struct {
 	handler *Handler
 }
 
+// New builds the access module with authentication, token and rate limit dependencies.
 func New(dependencies Dependencies) *Module {
 	repository := NewRepository(dependencies.Postgres)
 	tokens := newTokenService(dependencies.Config.JWTSecret)
@@ -30,10 +31,12 @@ func New(dependencies Dependencies) *Module {
 	}
 }
 
+// TokenService exposes token parsing to shared authentication middleware.
 func (module *Module) TokenService() *TokenService {
 	return module.tokens
 }
 
+// RegisterRoutes mounts access routes for login and authenticated identity lookup.
 func (module *Module) RegisterRoutes(public, authenticated *gin.RouterGroup) {
 	public.POST("/auth/login", module.handler.login)
 	authenticated.GET("/me", module.handler.me)

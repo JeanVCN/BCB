@@ -31,6 +31,7 @@ type BillingGateway interface {
 	ProfileInTransaction(context.Context, pgx.Tx, string) (billing.Profile, error)
 }
 
+// NewRepository creates a messages repository with its required billing gateway.
 func NewRepository(pool *pgxpool.Pool, billing BillingGateway) *Repository {
 	return &Repository{pool: pool, billing: billing}
 }

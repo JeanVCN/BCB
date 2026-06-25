@@ -30,6 +30,7 @@ type Repository struct {
 	pool *pgxpool.Pool
 }
 
+// NewRepository creates a billing repository backed by PostgreSQL.
 func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
@@ -200,6 +201,7 @@ func newID() string {
 	return uuid.NewString()
 }
 
+// RequestHash produces a stable hash for idempotent billing operations.
 func RequestHash(operation string, payload any) string {
 	encoded, _ := json.Marshal(struct {
 		Operation string `json:"operation"`

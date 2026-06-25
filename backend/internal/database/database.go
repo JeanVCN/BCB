@@ -15,6 +15,7 @@ import (
 //go:embed migrations/*.sql
 var migrationFiles embed.FS
 
+// Open creates and verifies a PostgreSQL connection pool.
 func Open(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	pool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
@@ -29,6 +30,7 @@ func Open(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
+// Migrate applies embedded SQL migrations to the configured database.
 func Migrate(databaseURL string) error {
 	source, err := iofs.New(migrationFiles, "migrations")
 	if err != nil {

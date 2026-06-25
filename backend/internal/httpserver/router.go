@@ -19,6 +19,7 @@ type Dependencies struct {
 	Readiness ReadinessChecker
 }
 
+// NewRouter creates the HTTP router with shared middleware, health checks and module routes.
 func NewRouter(dependencies Dependencies) http.Handler {
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())

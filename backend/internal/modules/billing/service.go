@@ -18,6 +18,7 @@ type Service struct {
 	locks      *LockManager
 }
 
+// NewService creates the billing service that coordinates repository access and locks.
 func NewService(repository *Repository, locks *LockManager) *Service {
 	return &Service{repository: repository, locks: locks}
 }
@@ -30,14 +31,17 @@ func (service *Service) transactions(ctx context.Context, clientID string) ([]Tr
 	return service.repository.transactions(ctx, clientID)
 }
 
+// ChargeMessage applies the financial charge for a message inside the caller transaction.
 func (service *Service) ChargeMessage(ctx context.Context, tx pgx.Tx, command MessageChargeCommand) (MessageChargeResult, error) {
 	return service.repository.chargeMessage(ctx, tx, command)
 }
 
+// ReverseMessageCharge reverses a previously charged message inside the caller transaction.
 func (service *Service) ReverseMessageCharge(ctx context.Context, tx pgx.Tx, messageID string) error {
 	return service.repository.reverseMessageCharge(ctx, tx, messageID)
 }
 
+// ProfileInTransaction returns the locked billing profile inside the caller transaction.
 func (service *Service) ProfileInTransaction(ctx context.Context, tx pgx.Tx, clientID string) (Profile, error) {
 	return service.repository.profileInTransaction(ctx, tx, clientID)
 }

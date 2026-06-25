@@ -13,6 +13,7 @@ type Module struct {
 	handler *Handler
 }
 
+// New builds the plan change module with request workflow dependencies.
 func New(dependencies Dependencies) *Module {
 	repository := newRepository(dependencies.Postgres)
 	service := newService(repository)
@@ -20,6 +21,7 @@ func New(dependencies Dependencies) *Module {
 	return &Module{handler: newHandler(service)}
 }
 
+// RegisterRoutes mounts client and admin plan change workflow routes.
 func (module *Module) RegisterRoutes(admin, client *gin.RouterGroup) {
 	client.POST("/plan-change-requests", module.handler.create)
 	client.GET("/plan-change-requests/current", module.handler.current)

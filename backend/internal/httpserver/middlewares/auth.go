@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Authenticate validates a Bearer token and stores its claims in the request context.
 func Authenticate(tokens *access.TokenService) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		header := ctx.GetHeader("Authorization")
@@ -30,6 +31,7 @@ func Authenticate(tokens *access.TokenService) gin.HandlerFunc {
 	}
 }
 
+// RequireRole blocks requests whose authenticated claims do not match the required role.
 func RequireRole(role domain.Role) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		claims, ok := access.ClaimsFromContext(ctx)

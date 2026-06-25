@@ -15,6 +15,7 @@ type Module struct {
 	handler *Handler
 }
 
+// New builds the billing module with PostgreSQL persistence and Redis locking.
 func New(dependencies Dependencies) *Module {
 	repository := NewRepository(dependencies.Postgres)
 	locks := NewLockManager(dependencies.Redis)
@@ -23,6 +24,7 @@ func New(dependencies Dependencies) *Module {
 	return &Module{handler: newHandler(service)}
 }
 
+// RegisterRoutes mounts billing routes for administrators and client users.
 func (module *Module) RegisterRoutes(admin, client *gin.RouterGroup) {
 	client.GET("/billing", module.handler.profile)
 	client.GET("/billing/transactions", module.handler.clientTransactions)

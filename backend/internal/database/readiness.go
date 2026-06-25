@@ -13,6 +13,7 @@ type Readiness struct {
 	Redis    *redis.Client
 }
 
+// Ready verifies that all dependencies required to serve traffic are reachable.
 func (readiness Readiness) Ready(ctx context.Context) error {
 	if err := readiness.Postgres.Ping(ctx); err != nil {
 		return fmt.Errorf("postgres: %w", err)

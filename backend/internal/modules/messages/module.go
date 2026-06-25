@@ -16,6 +16,7 @@ type Module struct {
 	handler *Handler
 }
 
+// New builds the messages module with billing integration and queue persistence.
 func New(dependencies Dependencies) *Module {
 	locks := billing.NewLockManager(dependencies.Redis)
 	billingService := billing.NewService(billing.NewRepository(dependencies.Postgres), locks)
@@ -25,6 +26,7 @@ func New(dependencies Dependencies) *Module {
 	return &Module{handler: newHandler(service)}
 }
 
+// RegisterRoutes mounts client message history and send routes.
 func (module *Module) RegisterRoutes(client *gin.RouterGroup) {
 	client.GET("/conversations/:conversationId/messages", module.handler.list)
 	client.POST("/conversations/:conversationId/messages", module.handler.send)

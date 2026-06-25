@@ -15,6 +15,7 @@ type Worker struct {
 	id         string
 }
 
+// NewWorker creates a message dispatch worker using the provided repository.
 func NewWorker(repository *Repository, logger *slog.Logger) *Worker {
 	if logger == nil {
 		logger = slog.Default()
@@ -22,6 +23,7 @@ func NewWorker(repository *Repository, logger *slog.Logger) *Worker {
 	return &Worker{repository: repository, logger: logger, id: "bcb-simple-worker"}
 }
 
+// Run processes dispatch jobs until the context is cancelled.
 func (worker *Worker) Run(ctx context.Context) {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()

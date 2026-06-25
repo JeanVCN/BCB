@@ -18,10 +18,12 @@ type LockManager struct {
 	ttl   time.Duration
 }
 
+// NewLockManager creates a Redis-backed lock manager for billing mutations.
 func NewLockManager(redis *redis.Client) *LockManager {
 	return &LockManager{redis: redis, ttl: 10 * time.Second}
 }
 
+// WithClientLock runs an action while holding the billing lock for a client account.
 func (manager *LockManager) WithClientLock(ctx context.Context, clientID string, action func() error) error {
 	if manager.redis == nil {
 		return ErrLockUnavailable

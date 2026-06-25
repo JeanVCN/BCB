@@ -13,6 +13,7 @@ type Module struct {
 	handler *Handler
 }
 
+// New builds the conversations module for recipient and conversation management.
 func New(dependencies Dependencies) *Module {
 	repository := newRepository(dependencies.Postgres)
 	service := newService(repository)
@@ -20,6 +21,7 @@ func New(dependencies Dependencies) *Module {
 	return &Module{handler: newHandler(service)}
 }
 
+// RegisterRoutes mounts client-owned conversation routes.
 func (module *Module) RegisterRoutes(client *gin.RouterGroup) {
 	client.POST("/conversations", module.handler.create)
 	client.GET("/conversations", module.handler.list)

@@ -37,6 +37,7 @@ func (service *TokenService) issue(user User) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(service.secret)
 }
 
+// Parse validates a JWT value and returns its application claims.
 func (service *TokenService) Parse(value string) (Claims, error) {
 	token, err := jwt.ParseWithClaims(value, &Claims{}, func(token *jwt.Token) (any, error) {
 		if token.Method != jwt.SigningMethodHS256 {

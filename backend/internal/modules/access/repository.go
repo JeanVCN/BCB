@@ -15,10 +15,12 @@ type Repository struct {
 	pool *pgxpool.Pool
 }
 
+// NewRepository creates an access repository backed by PostgreSQL.
 func NewRepository(pool *pgxpool.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
+// BootstrapAdmin creates the initial administrator user if it does not already exist.
 func (repository *Repository) BootstrapAdmin(ctx context.Context, login, passwordHash string) error {
 	_, err := repository.pool.Exec(ctx, `
 		INSERT INTO users (id, role, login, password_hash, enabled)

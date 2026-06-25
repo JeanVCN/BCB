@@ -25,6 +25,7 @@ var commonPasswords = map[string]struct{}{
 	"admin123": {}, "senha123": {}, "senha123!": {}, "1234567890": {},
 }
 
+// ValidatePassword enforces the password policy used during registration and bootstrap.
 func ValidatePassword(password string) error {
 	length := len([]rune(password))
 	if length < 9 || length > 128 {
@@ -53,6 +54,7 @@ func ValidatePassword(password string) error {
 	return nil
 }
 
+// HashPassword returns an Argon2id encoded hash for the provided password.
 func HashPassword(password string) (string, error) {
 	salt := make([]byte, argonSaltLength)
 	if _, err := rand.Read(salt); err != nil {

@@ -36,6 +36,7 @@ type Routes struct {
 	Client        *gin.RouterGroup
 }
 
+// New creates the module registry and wires shared infrastructure into each domain module.
 func New(dependencies Dependencies) *Registry {
 	accessModule := access.New(access.Dependencies{
 		Config:   dependencies.Config,
@@ -75,10 +76,12 @@ func New(dependencies Dependencies) *Registry {
 	}
 }
 
+// TokenService returns the access token service used by HTTP authentication middleware.
 func (registry *Registry) TokenService() *access.TokenService {
 	return registry.access.TokenService()
 }
 
+// RegisterRoutes mounts every domain module into its appropriate route groups.
 func (registry *Registry) RegisterRoutes(routes Routes) {
 	registry.access.RegisterRoutes(routes.Public, routes.Authenticated)
 	registry.accounts.RegisterRoutes(routes.Public, routes.Admin)

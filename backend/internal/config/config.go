@@ -17,6 +17,7 @@ type Config struct {
 	RunMigrations bool
 }
 
+// Load reads and validates the application configuration from environment variables.
 func Load() (Config, error) {
 	port := os.Getenv("HTTP_PORT")
 	if port == "" {

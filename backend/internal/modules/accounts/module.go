@@ -13,6 +13,7 @@ type Module struct {
 	handler *Handler
 }
 
+// New builds the accounts module with registration and administrative account workflows.
 func New(dependencies Dependencies) *Module {
 	repository := newRepository(dependencies.Postgres)
 	service := newService(repository)
@@ -22,6 +23,7 @@ func New(dependencies Dependencies) *Module {
 	}
 }
 
+// RegisterRoutes mounts public registration and admin account management routes.
 func (module *Module) RegisterRoutes(public, admin *gin.RouterGroup) {
 	public.POST("/auth/register", module.handler.register)
 	admin.GET("/clients", module.handler.listClients)
