@@ -108,6 +108,9 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
   sessão/papel; telas e fluxos ficam em `src/features`; componentes
   reutilizáveis em `src/components`; tipos de UI em `src/types`; helpers puros
   em `src/utils`; integração HTTP permanece centralizada em `src/api.ts`.
+- Modais devem priorizar legibilidade e acessibilidade visual com superfície
+  opaca, sem estética glass/translúcida que prejudique leitura sobre o
+  conteúdo da página.
 - A persistência dos contextos usa o nome `Repository`, não `Store`, por
   representar a abstração de acesso ao agregado/dados do domínio.
 - A camada `httpserver` contém apenas roteador, middlewares e helpers de
@@ -470,6 +473,9 @@ Somente depois do essencial estar estável, avaliar:
   de ser apenas um arquivo versionado e passou a ser servida localmente pelo
   backend em `/swagger.html` e `/openapi.yaml`, com proxy equivalente no
   frontend/Nginx.
+- Em 2026-06-25, por solicitação do responsável do projeto, os modais do
+  frontend passaram a usar superfície opaca, removendo a estética glass para
+  melhorar legibilidade e usabilidade.
 
 ## Pendências abertas
 

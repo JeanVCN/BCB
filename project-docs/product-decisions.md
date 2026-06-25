@@ -73,6 +73,7 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Arquitetura frontend | Organizar React em `features`, `components`, `types` e `utils`, mantendo `App.tsx` como composição por sessão/papel e `api.ts` como integração HTTP centralizada | Melhorar legibilidade, manutenção e apresentação técnica sem overengineering |
 | Navegação frontend | Separar áreas por estado de tela em vez de usar âncoras para rolar uma página longa; cliente navega entre dashboard, conversas e financeiro; admin navega entre dashboard, solicitações e clientes | Dar sensação de sistema profissional, reduzir excesso de informação simultânea e tornar o chat uma área central de trabalho |
 | Experiência cliente no frontend | Usuário `client` entra inicialmente em Conversas; topbar exibe disponível do plano vigente; telefone de destinatário usa máscara visual com exemplo fictício `+55 (55) 5555-5555` | Reforçar chat como função central, manter contexto financeiro visível durante envio e melhorar preenchimento sem alterar normalização backend |
+| Modais do frontend | Usar superfícies opacas, sem estética glass/translúcida | Melhorar legibilidade, contraste e usabilidade durante ações administrativas e formulários críticos |
 | Fronteira financeiro/mensagens | `messages` orquestra o envio; `billing` executa cobrança e estorno usando a mesma transação | Preservar atomicidade sem espalhar regra financeira no domínio de mensagens |
 | Dependência entre domínios | `messages` consome uma interface do service de `billing`, não o repository concreto | Compartilhar regra de negócio pela camada correta e manter persistência encapsulada no domínio financeiro |
 | Organização do repository financeiro | Manter o núcleo transacional em `repository.go` e dividir auxiliares em poucos arquivos temáticos | Melhorar navegação sem deixar o arquivo principal vazio nem transformar o pacote em microarquivos |
@@ -393,3 +394,6 @@ Não há definição funcional bloqueante para iniciar a implementação.
   especificação em `/openapi.yaml` embutida no binário Go e proxy equivalente
   pelo Nginx do frontend. Decisão solicitada pelo responsável do projeto em
   2026-06-25.
+- Removida a estética glass dos modais do frontend, substituindo transparência
+  por superfície opaca e overlay mais escuro para priorizar legibilidade.
+  Decisão solicitada pelo responsável do projeto em 2026-06-25.
