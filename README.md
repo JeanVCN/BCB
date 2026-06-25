@@ -73,8 +73,6 @@ cadastro/login -> conversas -> envio de mensagem -> fila/worker -> status -> fin
 - Valores financeiros são armazenados em centavos, sem ponto flutuante.
 - O primeiro administrador é criado por comando local, sem endpoint público.
 - A API aplica migrations automaticamente no ambiente Docker por padrão.
-- `docs/` contém os documentos oficiais recebidos para o desafio e não é
-  alterado pela implementação.
 
 ## Como executar
 
@@ -244,7 +242,6 @@ npm run build
 ├── frontend/                 # React + TypeScript + Vite
 ├── project-docs/             # Decisões, contratos, OpenAPI e modelo autoral
 ├── ai-memory/                # Memória operacional para IA
-├── docs/                     # Documentação oficial recebida do desafio
 ├── compose.yaml              # Orquestração Docker Compose
 └── .env.example              # Variáveis de ambiente de desenvolvimento
 ```
@@ -345,9 +342,8 @@ go generate ./internal/httpserver
 
 ## Documentação complementar
 
-Este README foi escrito a partir dos documentos oficiais recebidos para o
-desafio, mantidos localmente em `docs/`. Essa pasta não faz parte da
-documentação autoral do projeto.
+Os documentos abaixo registram as decisões autorais, contratos e critérios
+usados para construir e avaliar esta entrega.
 
 - [Decisões de produto](project-docs/product-decisions.md)
 - [Critérios de aceite](project-docs/acceptance-criteria.md)

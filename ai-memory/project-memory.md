@@ -13,8 +13,8 @@
   saldo/consumo para troca de plano e envio de mensagens com cobrança, fila
   persistente, worker, retry, estorno e solicitação de mudança de plano
   implementados localmente.
-- Fonte inicial: documentos oficiais locais em `docs/` e definições do
-  responsável pelo projeto.
+- Fonte inicial: requisitos do desafio e definições do responsável pelo
+  projeto.
 
 ## Protocolo de manutenção
 
@@ -126,8 +126,8 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
 
 ### Documentação
 
-- `docs/` é material oficial da empresa, foi reduzido aos documentos da vaga
-  Fullstack, não deve ser corrigido e não será commitado.
+- O repositório final não depende de uma pasta `docs/`; a documentação
+  versionada e autoral fica em `project-docs/`, `ai-memory/` e no README.
 - As referências ausentes a perfis Backend e Frontend não são lacunas do
   escopo deste projeto.
 - A memória para IA e a documentação do projeto devem permanecer separadas do
@@ -335,7 +335,7 @@ Somente depois do essencial estar estável, avaliar:
   publicar instruções de execução que ainda não foram validadas.
 - A partir de 2026-06-24, detalhes históricos extensos ficam em
   `HISTORICO_IMPLEMENTACAO.md`; o README principal deve responder diretamente
-  ao que os documentos oficiais em `docs/` pedem para avaliação.
+  ao que os requisitos do desafio pedem para avaliação.
 
 ## Implementação atual
 

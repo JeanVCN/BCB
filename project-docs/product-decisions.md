@@ -1,8 +1,7 @@
 # Escopo e decisões do projeto BCB
 
 Este documento registra as decisões autorais do projeto. Ele complementa os
-requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
-`docs/`, e evoluirá durante o desenvolvimento.
+requisitos do desafio e evoluirá durante o desenvolvimento.
 
 ## Estado do projeto
 
