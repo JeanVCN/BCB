@@ -284,8 +284,43 @@ A especificação OpenAPI 3.0 da API está em
 schemas, autenticação Bearer JWT, cabeçalho `Idempotency-Key`, respostas de
 erro e rotas efetivamente registradas no backend.
 
-Para visualizar em uma interface Swagger, abra o arquivo em ferramentas como
-Swagger Editor, Swagger UI ou Redoc.
+Além do arquivo versionado, o backend serve uma interface Swagger UI local:
+
+- Backend com portas padrão: `http://localhost:8080/swagger.html`
+- Frontend/Nginx com portas padrão: `http://localhost:3000/swagger.html`
+- Backend com portas alternativas: `http://localhost:18080/swagger.html`
+- Frontend/Nginx com portas alternativas: `http://localhost:13000/swagger.html`
+
+O YAML bruto também fica disponível em:
+
+- `http://localhost:8080/openapi.yaml`
+- `http://localhost:3000/openapi.yaml`
+
+### Como usar a Swagger UI local
+
+1. Suba o ambiente com `docker compose up --build`.
+2. Crie o admin com `docker compose run --rm backend /app/admin-bootstrap`.
+3. Abra `/swagger.html` na porta do backend ou do frontend.
+4. Faça login em `POST /api/v1/auth/login`.
+5. Copie o campo `accessToken` da resposta.
+6. Clique em **Authorize** no topo da Swagger UI.
+7. Informe apenas o token JWT. A UI já usa o esquema Bearer configurado.
+8. Execute os endpoints protegidos.
+9. Para envio de mensagem e mutações financeiras administrativas, informe um
+   valor único no header `Idempotency-Key`.
+
+Observação: a página `/swagger.html` é servida localmente pelo backend, mas os
+assets visuais da Swagger UI são carregados por CDN pública. A especificação
+OpenAPI em si fica embutida no binário Go e também versionada em
+`project-docs/openapi.yaml`.
+
+Ao alterar o contrato em `project-docs/openapi.yaml`, sincronize a cópia
+embutida no backend antes de buildar:
+
+```bash
+cd backend
+go generate ./internal/httpserver
+```
 
 ## Decisões técnicas
 

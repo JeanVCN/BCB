@@ -22,6 +22,7 @@ type Dependencies struct {
 func NewRouter(dependencies Dependencies) http.Handler {
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
+	registerDocumentationRoutes(router)
 
 	router.GET("/health/live", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"status": "ok"})

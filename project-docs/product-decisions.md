@@ -48,7 +48,7 @@ requisitos fornecidos pela empresa, sem modificar os arquivos oficiais em
 | Sessão | Token de uma hora, sem renovação automática | Manter segurança e escopo inicial simples |
 | Ordem da fila | Urgente antes de normal; FIFO dentro da prioridade | Cumprir prioridade sem perder previsibilidade |
 | README de entrega | Manter o README principal focado no que o desafio pede: descrição, premissas, tecnologias, execução, testes, funcionalidades, limitações e links | Facilitar avaliação e uso do projeto sem misturar histórico interno |
-| OpenAPI | Manter uma especificação OpenAPI 3.0 em `project-docs/openapi.yaml` e referencia-la no README | Dar ao avaliador um contrato navegável da API sem depender apenas de texto livre |
+| OpenAPI/Swagger UI | Manter uma especificação OpenAPI 3.0 em `project-docs/openapi.yaml`, servir `/swagger.html` e `/openapi.yaml` pelo backend, proxyar essas rotas pelo frontend/Nginx e sincronizar a cópia embutida no backend com `go generate ./internal/httpserver` quando o contrato mudar | Dar ao avaliador um contrato navegável e testável localmente, sem depender apenas de texto livre |
 | Histórico de implementação | Preservar fases, correções e evolução incremental em `HISTORICO_IMPLEMENTACAO.md` | Manter rastreabilidade sem poluir a documentação pública principal |
 | Organização inicial | Monorepo com backend, frontend e infraestrutura na raiz | Facilitar integração e execução do desafio |
 | Runtime HTTP | Timeouts, logs estruturados e shutdown gracioso | Partir de um servidor previsível e operável |
@@ -386,3 +386,10 @@ Não há definição funcional bloqueante para iniciar a implementação.
   referenciada no README, e reconstruído o arquivo
   `ENTREGA_APRESENTACAO_LOCAL.md` como roteiro de preparação para apresentação
   e live coding. Decisão solicitada pelo responsável do projeto em 2026-06-24.
+
+### 2026-06-25
+
+- Implementada Swagger UI local servida pelo backend em `/swagger.html`, com
+  especificação em `/openapi.yaml` embutida no binário Go e proxy equivalente
+  pelo Nginx do frontend. Decisão solicitada pelo responsável do projeto em
+  2026-06-25.

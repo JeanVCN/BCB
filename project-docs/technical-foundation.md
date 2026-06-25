@@ -29,6 +29,12 @@
   abertas pela `main`.
 - Frontend estático servido por Nginx, que também será o proxy da API no
   ambiente Docker.
+- A documentação interativa da API é servida pelo backend em `/swagger.html`,
+  com especificação OpenAPI em `/openapi.yaml`; o Nginx do frontend proxya as
+  mesmas rotas para acesso pela porta do frontend.
+- O arquivo autoral da especificação permanece em `project-docs/openapi.yaml`.
+  O backend embute uma cópia em `internal/httpserver/openapi.yaml`, regenerada
+  por `go generate ./internal/httpserver` antes do build quando o contrato muda.
 
 ## Limites desta etapa
 

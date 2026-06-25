@@ -135,6 +135,12 @@ Essa nomenclatura deve ser preservada para evitar a ambiguidade do termo
 - A documentação OpenAPI 3.0 da API deve ficar em
   `project-docs/openapi.yaml` e ser referenciada no README como contrato
   navegável complementar ao `project-docs/api-contracts.md`.
+- O backend deve servir a documentação interativa em `/swagger.html` e o YAML
+  bruto em `/openapi.yaml`. O frontend/Nginx deve proxyar essas mesmas rotas
+  para facilitar o acesso local pela porta do frontend.
+- `project-docs/openapi.yaml` é a fonte autoral do contrato; o backend embute
+  uma cópia em `internal/httpserver/openapi.yaml`, sincronizada com
+  `go generate ./internal/httpserver` quando o contrato muda.
 - O histórico de fases, correções e evolução incremental deve ficar separado em
   `HISTORICO_IMPLEMENTACAO.md`, preservando o README antigo como registro
   consultável sem poluir a apresentação principal.
@@ -460,6 +466,10 @@ Somente depois do essencial estar estável, avaliar:
   documentação OpenAPI 3.0 em `project-docs/openapi.yaml`, o README passou a
   apontar para essa especificação e o guia `ENTREGA_APRESENTACAO_LOCAL.md` foi
   reconstruído como material de preparação para apresentação e live coding.
+- Em 2026-06-25, por solicitação do responsável do projeto, a OpenAPI deixou
+  de ser apenas um arquivo versionado e passou a ser servida localmente pelo
+  backend em `/swagger.html` e `/openapi.yaml`, com proxy equivalente no
+  frontend/Nginx.
 
 ## Pendências abertas
 
